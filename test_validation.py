@@ -123,7 +123,7 @@ class TestValidation(unittest.TestCase):
         """Test validation of non-numeric limits."""
         is_valid, error = validate_limit("invalid")
         self.assertFalse(is_valid)
-        self.assertIn("must be numeric", error)
+        self.assertIn("must be a numeric", error)
 
 
 if __name__ == '__main__':
