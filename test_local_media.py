@@ -3,7 +3,7 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -475,6 +475,89 @@ def test_get_file_info_image_dimension_error():
             assert result[2] == "Unknown"  # resolution should be Unknown due to exception
             assert result[3] != "Unknown"  # Should have creation date
             assert result[4] == temp_path  # file_path
+    finally:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass
+
+
+@pytest.mark.unit
+def test_get_file_info_image_open_exception():
+    """Test get_file_info when Image.open raises an exception."""
+    from local_media import get_file_info
+    
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+        f.write(b"fake image data")
+        temp_path = f.name
+    
+    try:
+        # Mock Image.open to raise a specific exception
+        with patch('local_media.Image.open', side_effect=OSError("Cannot open image file")):
+            result = get_file_info(temp_path)
+            
+            # Should handle the exception and return "Unknown" resolution
+            assert result[2] == "Unknown"  # resolution should be Unknown
+            
+    finally:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass
+
+
+@pytest.mark.unit
+def test_get_file_info_image_size_exception():
+    """Test get_file_info when getting image size raises an exception."""
+    from local_media import get_file_info
+    
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+        f.write(b"fake image data")
+        temp_path = f.name
+    
+    try:
+        # Mock Image.open to return an object that raises exception on .size
+        mock_img = MagicMock()
+        mock_img.__enter__ = MagicMock(return_value=mock_img)
+        mock_img.__exit__ = MagicMock(return_value=None)
+        mock_img.size = property(lambda self: (_ for _ in ()).throw(RuntimeError("Size error")))
+        
+        with patch('local_media.Image.open', return_value=mock_img):
+            result = get_file_info(temp_path)
+            
+            # Should handle the exception and return "Unknown" resolution
+            assert result[2] == "Unknown"  # resolution should be Unknown
+            
+    finally:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass
+
+
+@pytest.mark.unit
+def test_get_file_info_image_context_manager_exception():
+    """Test get_file_info when Image context manager raises an exception."""
+    from local_media import get_file_info
+    
+    # Create a temporary file
+    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+        f.write(b"fake image data")
+        temp_path = f.name
+    
+    try:
+        # Mock Image.open to raise exception in context manager
+        mock_context = MagicMock()
+        mock_context.__enter__.side_effect = IOError("Context manager error")
+        
+        with patch('local_media.Image.open', return_value=mock_context):
+            result = get_file_info(temp_path)
+            
+            # Should handle the exception and return "Unknown" resolution
+            assert result[2] == "Unknown"  # resolution should be Unknown
+            
     finally:
         try:
             os.unlink(temp_path)

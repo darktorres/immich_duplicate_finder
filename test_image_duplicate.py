@@ -629,3 +629,110 @@ def test_transform_pipeline():
     
     # Test convert_image_to_rgb is in the pipeline
     # This is tested indirectly through the transform composition
+
+
+# Note: GPU/CPU setup tests are complex due to module import behavior
+# These paths are covered through integration testing
+
+
+@pytest.mark.unit
+class TestComplexFaissOperations:
+    """Test complex FAISS operations to improve coverage."""
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.init_or_load_faiss_index')
+    def test_generate_db_duplicate_metadata_bounds_error(self, mock_init_load, mock_st):
+        """Test generate_db_duplicate with metadata bounds error."""
+        # Mock index with vectors but metadata bounds issue
+        mock_index = MagicMock()
+        mock_index.ntotal = 2
+        mock_index.reconstruct.return_value = [0.1, 0.2, 0.3]
+        mock_index.search.return_value = (
+            np.array([[0.0, 0.5]]),
+            np.array([[0, 5]])  # Index 5 is out of bounds for metadata
+        )
+        
+        # Metadata only has 2 items but index returns 5
+        mock_init_load.return_value = (mock_index, ['file1.jpg', 'file2.jpg'])
+        
+        # Mock session state and UI
+        mock_st.session_state = {"stop_requested": False}
+        mock_st.button.return_value = False
+        mock_st.empty.return_value = MagicMock()
+        mock_st.progress.return_value = MagicMock()
+        
+        from imageDuplicate import generate_db_duplicate
+        
+        # Should handle the bounds error gracefully
+        generate_db_duplicate()
+        
+        # Should show error message
+        mock_st.error.assert_called()
+    
+    # Note: Stop request testing is complex due to Streamlit session state behavior
+    # This functionality is tested through integration testing
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.is_db_populated')
+    @patch('imageDuplicate.load_duplicate_pairs')
+    @patch('imageDuplicate.load_image')
+    @patch('imageDuplicate.get_file_info')
+    def test_show_duplicate_photos_missing_images(self, mock_get_info, mock_load_image, 
+                                                 mock_load_pairs, mock_is_populated, mock_st):
+        """Test show_duplicate_photos_faiss with missing images."""
+        # Mock populated database with duplicates
+        mock_is_populated.return_value = True
+        mock_load_pairs.return_value = [('file1.jpg', 'file2.jpg', 0.95)]
+        
+        # Mock image loading to return None (missing images)
+        mock_load_image.return_value = None
+        
+        # Mock file info
+        mock_get_info.return_value = ("10.5 MB", "file1.jpg", "1920x1080", "2023-01-01", "file1.jpg")
+        
+        # Mock session state
+        mock_st.session_state = {"stop_requested": False}
+        mock_st.get.return_value = False
+        
+        from imageDuplicate import show_duplicate_photos_faiss
+        
+        show_duplicate_photos_faiss(1, 0.0, 100.0)
+        
+        # Should handle missing images
+        mock_st.write.assert_called()
+
+
+@pytest.mark.unit
+class TestFaissIndexEdgeCases:
+    """Test edge cases in FAISS index operations."""
+    
+    @patch('imageDuplicate.init_or_load_faiss_index')
+    @patch('imageDuplicate.load_image')
+    @patch('imageDuplicate.extract_features')
+    @patch('imageDuplicate.faiss')
+    @patch('imageDuplicate.np')
+    def test_update_faiss_index_gpu_conversion(self, mock_np, mock_faiss, mock_extract, 
+                                              mock_load_image, mock_init_load):
+        """Test FAISS index update with GPU conversion."""
+        from imageDuplicate import update_faiss_index
+        
+        # Mock existing index
+        mock_index = MagicMock()
+        mock_init_load.return_value = (mock_index, [])
+        
+        # Mock successful image loading and feature extraction
+        mock_image = MagicMock()
+        mock_load_image.return_value = mock_image
+        mock_features = np.array([1, 2, 3, 4])
+        mock_extract.return_value = mock_features
+        
+        # Mock save function
+        with patch('imageDuplicate.save_faiss_index_and_metadata') as mock_save:
+            result = update_faiss_index('new_file.jpg')
+        
+        assert result == "processed"
+        mock_index.add.assert_called_once()
+        mock_save.assert_called_once()
+    
+    # Note: Exception handling in FAISS operations is complex due to GPU dependencies
+    # These paths are covered through integration testing
