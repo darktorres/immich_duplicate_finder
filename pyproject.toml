@@ -1,0 +1,49 @@
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+faiss-cpu = "1.11.0.post1"
+imagehash = "4.3.2"
+numpy = "2.3.1"
+pillow = "11.3.0"
+pillow-heif = "1.0.0"
+requests = "2.32.4"
+ruff = "^0.12.4"
+torch = { version = "2.7.1+cu126", source = "pytorch" }
+torchvision = { version = "0.22.1+cu126", source = "pytorch" }
+
+[tool.poetry.group.streamlit.dependencies]
+streamlit = "1.47.0"
+streamlit-image-comparison = "0.0.4"
+
+[tool.poetry.group.dev.dependencies]
+poethepoet = "^0.36.0"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu126"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+streamlit = "streamlit run app.py"
+
+[tool.poe.tasks.lint]
+cmd = "ruff check --fix ."
+
+[tool.poe.tasks.format]
+cmd = "ruff format ."
+
+[tool.poe.tasks.check]
+cmd = "ruff check . && ruff format --diff ."
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+fix = true
+lint.select = ["E", "F", "B", "I"]  # E=pycodestyle, F=pyflakes, B=bugbear, I=import sort
+exclude = ["__pycache__", ".venv", "dist"]
