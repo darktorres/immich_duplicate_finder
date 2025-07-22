@@ -193,10 +193,12 @@ def calculateFaissIndex(media_files):
 
     # Reset stop flag at the end of processing
     st.session_state["stop_index"] = False
-    if processed_files >= total_files:
+    # Check if we've gone through all files (regardless of processed vs skipped)
+    if not st.session_state.get("stop_index", False):
         st.session_state["message"] = "Processing complete!"
         message_placeholder.text(st.session_state["message"])
         progress_bar.progress(1.0)
+        st.session_state["calculate_faiss"] = False  # Reset the flag to prevent re-running
 
 
 def generate_db_duplicate():
@@ -249,6 +251,8 @@ def generate_db_duplicate():
 
     message_placeholder.text(f"Finished processing {num_vectors} vectors.")
     progress_bar.empty()
+    # Reset the stop flag after completion
+    st.session_state["stop_requested"] = False
 
 
 def show_duplicate_photos_faiss(limit, min_threshold, max_threshold):

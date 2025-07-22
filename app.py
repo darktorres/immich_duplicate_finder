@@ -100,10 +100,14 @@ def main():
             calculateFaissIndex(media_files)
         else:
             st.warning("No image files found in the specified folder.")
+        # Reset the flag after processing
+        st.session_state["calculate_faiss"] = False
 
-    # Show FAISS duplicate photos if the corresponding flag is set
+    # Generate duplicate database if the corresponding flag is set
     if st.session_state["generate_db_duplicate"]:
         generate_db_duplicate()
+        # Reset the flag after processing
+        st.session_state["generate_db_duplicate"] = False
 
     # Show FAISS duplicate photos if the corresponding flag is set
     if st.session_state["show_faiss_duplicate"]:
@@ -112,6 +116,8 @@ def main():
             st.session_state["faiss_min_threshold"],
             st.session_state["faiss_max_threshold"],
         )
+        # Reset the flag after processing
+        st.session_state["show_faiss_duplicate"] = False
 
 
 if __name__ == "__main__":
