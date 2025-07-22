@@ -104,7 +104,6 @@ def save_faiss_index_and_metadata(index, metadata):
 
 def update_faiss_index(file_path):
     """Update the FAISS index and metadata with a new image and its path."""
-    global index  # Assuming index is defined globally
     index, existing_metadata = init_or_load_faiss_index()
 
     if file_path in existing_metadata:
@@ -319,8 +318,9 @@ def show_duplicate_photos_faiss(limit, min_threshold, max_threshold):
                     st.write(f"Missing information for one or both assets: {file_path_1}, {file_path_2}")
 
                 st.markdown("---")
-            except:
-                st.write("Missing information for one or both assets")
+            except Exception as e:
+                st.write(f"Error processing duplicate pair: {str(e)}")
+                print(f"Error processing duplicate pair {i+1}: {e}")
         progress_bar.progress(100)
     else:
         st.write("No duplicates found.")

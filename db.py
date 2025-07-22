@@ -69,6 +69,7 @@ def startup_processed_duplicate_faiss_db():
 def save_duplicate_pair(vector_id1, vector_id2, similarity):
     """Saves a pair of duplicate file paths to the database if it doesn't already exist."""
     similarity = float(similarity)
+    conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
         cursor = conn.cursor()
@@ -88,11 +89,13 @@ def save_duplicate_pair(vector_id1, vector_id2, similarity):
     except Exception as e:
         print("Error inserting duplicate pair:", e)
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def delete_duplicate_pair(asset_id_1, asset_id_2):
     """Deletes a specific duplicate pair from the database."""
+    conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
         cursor = conn.cursor()
@@ -106,7 +109,8 @@ def delete_duplicate_pair(asset_id_1, asset_id_2):
     except Exception as e:
         print(f"Error deleting duplicate entries for asset pair {asset_id_1}-{asset_id_2}:", e)
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def load_duplicate_pairs(min_threshold, max_threshold):

@@ -16,15 +16,23 @@ def setup_local_media():
 
 def get_media_files(folder_path):
     """Recursively finds all supported image files in a given folder."""
-    if not os.path.isdir(folder_path):
+    if not folder_path or not os.path.isdir(folder_path):
         print(f"Error: Folder not found at {folder_path}")
         return []
 
     filepaths = []
-    for root, _, files in os.walk(folder_path):
-        for file in files:
-            if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
-                filepaths.append(os.path.join(root, file))
+    try:
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
+                    full_path = os.path.join(root, file)
+                    # Validate the file exists and is readable
+                    if os.path.isfile(full_path) and os.access(full_path, os.R_OK):
+                        filepaths.append(full_path)
+    except (OSError, PermissionError) as e:
+        print(f"Error accessing folder {folder_path}: {e}")
+        return []
+    
     return filepaths
 
 

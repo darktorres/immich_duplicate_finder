@@ -25,6 +25,10 @@ def setup_session_state():
         "calculate_faiss": False,
         "generate_db_duplicate": False,
         "show_faiss_duplicate": False,
+        "stop_index": False,
+        "stop_requested": False,
+        "message": "",
+        "progress": 0,
     }
     for key, default_value in session_defaults.items():
         if key not in st.session_state:
@@ -90,6 +94,10 @@ def main():
     if st.session_state["calculate_faiss"] or st.session_state["generate_db_duplicate"] or st.session_state["show_faiss_duplicate"]:
         if not folder_path or not os.path.isdir(folder_path):
             st.error("Please configure a valid media folder path in the sidebar settings.")
+            # Reset all flags to prevent stuck state
+            st.session_state["calculate_faiss"] = False
+            st.session_state["generate_db_duplicate"] = False
+            st.session_state["show_faiss_duplicate"] = False
             return  # Stop further execution since there are no assets to process
 
     # Calculate the FAISS index if the corresponding flag is set
