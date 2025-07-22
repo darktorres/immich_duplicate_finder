@@ -48,7 +48,7 @@ def configure_sidebar():
             st.session_state["faiss_min_threshold"] = st.number_input(
                 "Minimum Faiss threshold",
                 min_value=0.0,
-                max_value=10.0,
+                max_value=100.0,
                 value=st.session_state.get("faiss_min_threshold", 0.0),
                 step=0.01,
                 help="Set the lower limit of the FAISS similarity threshold for considering duplicates.",
@@ -58,8 +58,8 @@ def configure_sidebar():
             st.session_state["faiss_max_threshold"] = st.number_input(
                 "Maximum Faiss threshold",
                 min_value=0.0,
-                max_value=10.0,
-                value=st.session_state.get("faiss_max_threshold", 0.6),
+                max_value=100.0,
+                value=st.session_state.get("faiss_max_threshold", 100.0),
                 step=0.01,
                 help="Set the upper limit of the FAISS similarity threshold for considering duplicates.",
             )

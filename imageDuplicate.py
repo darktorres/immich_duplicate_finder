@@ -236,7 +236,9 @@ def show_duplicate_photos_faiss(limit, min_threshold, max_threshold):
                     st.session_state["generate_db_duplicate"] = False
                     break  # Exit the loop
 
-                file_path_1, file_path_2 = dup_pair
+                file_path_1, file_path_2, similarity = dup_pair
+
+                st.subheader(f"Pair {i + 1} - Similarity Score: {similarity:.4f}")
 
                 progress = (i + 1) / num_duplicates_to_show
                 progress_bar.progress(progress)

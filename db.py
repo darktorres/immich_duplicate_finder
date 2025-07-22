@@ -117,8 +117,9 @@ def load_duplicate_pairs(min_threshold, max_threshold):
         # Adjust the SQL query to filter duplicates within the specified range
         cursor.execute(
             """
-            SELECT vector_id1, vector_id2 FROM duplicates
-            WHERE similarity >= ? AND similarity <= ?""",
+            SELECT vector_id1, vector_id2, similarity FROM duplicates
+            WHERE similarity >= ? AND similarity <= ?
+            ORDER BY similarity ASC""",
             (min_threshold, max_threshold),
         )
         duplicates = cursor.fetchall()
