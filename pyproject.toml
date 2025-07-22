@@ -19,6 +19,9 @@ streamlit-image-comparison = "0.0.4"
 
 [tool.poetry.group.dev.dependencies]
 poethepoet = "^0.36.0"
+pytest = "^8.3.4"
+pytest-cov = "^6.0.0"
+pytest-mock = "^3.14.0"
 
 [[tool.poetry.source]]
 name = "pytorch"
@@ -41,9 +44,69 @@ cmd = "ruff format ."
 [tool.poe.tasks.check]
 cmd = "ruff check . && ruff format --diff ."
 
+[tool.poe.tasks.test]
+cmd = "pytest -v"
+
+[tool.poe.tasks.test-cov]
+cmd = "pytest --cov=. --cov-report=html --cov-report=term-missing -v"
+
+[tool.poe.tasks.test-watch]
+cmd = "pytest -f -v"
+
 [tool.ruff]
 line-length = 140
 target-version = "py312"
 fix = true
 lint.select = ["E", "F", "B", "I"]  # E=pycodestyle, F=pyflakes, B=bugbear, I=import sort
 exclude = ["__pycache__", ".venv", "dist"]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = [
+    ".",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "test_*.py",
+    "*_test.py",
+    "venv/*",
+    ".venv/*",
+    "*/site-packages/*",
+    "__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

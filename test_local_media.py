@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-import unittest
+import pytest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,127 +11,123 @@ from PIL import Image
 from local_media import bytes_to_megabytes, get_media_files, SUPPORTED_IMAGE_EXTENSIONS
 
 
-class TestLocalMedia(unittest.TestCase):
-    """Test cases for local media functions."""
+@pytest.fixture
+def temp_dir_with_files():
+    """Create a temporary directory with test files."""
+    temp_dir = tempfile.mkdtemp()
+    test_files = []
     
-    def setUp(self):
-        """Set up test fixtures."""
-        self.temp_dir = tempfile.mkdtemp()
-        
-        # Create some test files
-        self.test_files = []
-        for ext in ['.jpg', '.png', '.txt', '.JPG']:  # Mix of supported and unsupported
-            test_file = Path(self.temp_dir) / f"test{ext}"
-            test_file.touch()
-            self.test_files.append(str(test_file))
+    # Create some test files
+    for ext in ['.jpg', '.png', '.txt', '.JPG']:  # Mix of supported and unsupported
+        test_file = Path(temp_dir) / f"test{ext}"
+        test_file.touch()
+        test_files.append(str(test_file))
     
-    def tearDown(self):
-        """Clean up test fixtures."""
-        for file_path in self.test_files:
-            try:
-                os.unlink(file_path)
-            except FileNotFoundError:
-                pass
+    yield temp_dir, test_files
+    
+    # Cleanup
+    for file_path in test_files:
         try:
-            os.rmdir(self.temp_dir)
-        except OSError:
+            os.unlink(file_path)
+        except FileNotFoundError:
             pass
+    try:
+        os.rmdir(temp_dir)
+    except OSError:
+        pass
     
-    def test_bytes_to_megabytes_valid(self):
-        """Test conversion of bytes to megabytes."""
-        result = bytes_to_megabytes(1048576)  # 1 MB
-        self.assertEqual(result, "1.000 MB")
+@pytest.mark.parametrize("bytes_val,expected", [
+    (1048576, "1.000 MB"),  # 1 MB
+    (2097152, "2.000 MB"),  # 2 MB
+    (1536, "0.001 MB"),     # 1.5 KB
+    (0, "0.000 MB"),        # Zero bytes
+])
+def test_bytes_to_megabytes_valid(bytes_val, expected):
+    """Test conversion of bytes to megabytes."""
+    result = bytes_to_megabytes(bytes_val)
+    assert result == expected
+
+
+def test_bytes_to_megabytes_none():
+    """Test conversion when bytes is None."""
+    result = bytes_to_megabytes(None)
+    assert result == "0.000 MB"
+    
+def test_get_media_files_valid_folder(temp_dir_with_files):
+    """Test getting media files from valid folder."""
+    temp_dir, _ = temp_dir_with_files
+    media_files = get_media_files(temp_dir)
+    
+    # Should find .jpg, .png, and .JPG files (case insensitive)
+    # Note: Empty files might be filtered out by access validation
+    assert len(media_files) >= 0
+    assert len(media_files) <= 3
+    
+    # Check that all returned files have supported extensions
+    for file_path in media_files:
+        file_ext = Path(file_path).suffix.lower()
+        assert file_ext in SUPPORTED_IMAGE_EXTENSIONS
+
+
+def test_get_media_files_empty_folder():
+    """Test getting media files from empty folder."""
+    empty_dir = tempfile.mkdtemp()
+    try:
+        media_files = get_media_files(empty_dir)
+        assert len(media_files) == 0
+    finally:
+        os.rmdir(empty_dir)
+
+
+@pytest.mark.parametrize("invalid_path", [
+    "/nonexistent/path",
+    "",
+    None,
+])
+def test_get_media_files_invalid_paths(invalid_path):
+    """Test getting media files with invalid paths."""
+    media_files = get_media_files(invalid_path or "")
+    assert len(media_files) == 0
+    
+def test_get_media_files_permission_error(temp_dir_with_files, mocker):
+    """Test handling of permission errors."""
+    temp_dir, _ = temp_dir_with_files
+    mock_walk = mocker.patch('local_media.os.walk')
+    mock_walk.side_effect = PermissionError("Access denied")
+    
+    media_files = get_media_files(temp_dir)
+    assert len(media_files) == 0
+
+
+def test_supported_extensions_case_insensitive():
+    """Test that file extension matching is case insensitive."""
+    # Create files with different cases
+    test_dir = tempfile.mkdtemp()
+    try:
+        test_files = []
+        for ext in ['.jpg', '.JPG', '.Jpg', '.jPg']:
+            test_file = Path(test_dir) / f"test{ext}"
+            test_file.touch()
+            test_files.append(test_file)
         
-        result = bytes_to_megabytes(2097152)  # 2 MB
-        self.assertEqual(result, "2.000 MB")
-        
-        result = bytes_to_megabytes(1536)  # 1.5 KB
-        self.assertEqual(result, "0.001 MB")
-    
-    def test_bytes_to_megabytes_none(self):
-        """Test conversion when bytes is None."""
-        result = bytes_to_megabytes(None)
-        self.assertEqual(result, "0.000 MB")
-    
-    def test_bytes_to_megabytes_zero(self):
-        """Test conversion of zero bytes."""
-        result = bytes_to_megabytes(0)
-        self.assertEqual(result, "0.000 MB")
-    
-    def test_get_media_files_valid_folder(self):
-        """Test getting media files from valid folder."""
-        media_files = get_media_files(self.temp_dir)
-        
-        # Should find .jpg, .png, and .JPG files (case insensitive)
-        # Note: Empty files might be filtered out by access validation
-        self.assertGreaterEqual(len(media_files), 0)
-        self.assertLessEqual(len(media_files), 3)
+        media_files = get_media_files(test_dir)
+        # Empty files might be filtered out, so check that we find some files
+        # and that they have the right extensions
+        assert len(media_files) >= 0
+        assert len(media_files) <= 4
         
         # Check that all returned files have supported extensions
         for file_path in media_files:
             file_ext = Path(file_path).suffix.lower()
-            self.assertIn(file_ext, SUPPORTED_IMAGE_EXTENSIONS)
-    
-    def test_get_media_files_empty_folder(self):
-        """Test getting media files from empty folder."""
-        empty_dir = tempfile.mkdtemp()
-        try:
-            media_files = get_media_files(empty_dir)
-            self.assertEqual(len(media_files), 0)
-        finally:
-            os.rmdir(empty_dir)
-    
-    def test_get_media_files_nonexistent_folder(self):
-        """Test getting media files from non-existent folder."""
-        media_files = get_media_files("/nonexistent/path")
-        self.assertEqual(len(media_files), 0)
-    
-    def test_get_media_files_empty_path(self):
-        """Test getting media files with empty path."""
-        media_files = get_media_files("")
-        self.assertEqual(len(media_files), 0)
-    
-    @patch('local_media.os.walk')
-    def test_get_media_files_permission_error(self, mock_walk):
-        """Test handling of permission errors."""
-        mock_walk.side_effect = PermissionError("Access denied")
+            assert file_ext == '.jpg'  # All should be .jpg variants
         
-        media_files = get_media_files(self.temp_dir)
-        self.assertEqual(len(media_files), 0)
-    
-    def test_supported_extensions_case_insensitive(self):
-        """Test that file extension matching is case insensitive."""
-        # Create files with different cases
-        test_dir = tempfile.mkdtemp()
-        try:
-            test_files = []
-            for ext in ['.jpg', '.JPG', '.Jpg', '.jPg']:
-                test_file = Path(test_dir) / f"test{ext}"
-                test_file.touch()
-                test_files.append(test_file)
-            
-            media_files = get_media_files(test_dir)
-            # Empty files might be filtered out, so check that we find some files
-            # and that they have the right extensions
-            self.assertGreaterEqual(len(media_files), 0)
-            self.assertLessEqual(len(media_files), 4)
-            
-            # Check that all returned files have supported extensions
-            for file_path in media_files:
-                file_ext = Path(file_path).suffix.lower()
-                self.assertEqual(file_ext, '.jpg')  # All should be .jpg variants
-            
-        finally:
-            for test_file in test_files:
-                try:
-                    test_file.unlink()
-                except FileNotFoundError:
-                    pass
+    finally:
+        for test_file in test_files:
             try:
-                os.rmdir(test_dir)
-            except OSError:
+                test_file.unlink()
+            except FileNotFoundError:
                 pass
-
-
-if __name__ == '__main__':
-    unittest.main()
+        try:
+            os.rmdir(test_dir)
+        except OSError:
+            pass

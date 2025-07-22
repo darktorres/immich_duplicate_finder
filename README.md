@@ -84,11 +84,22 @@ This will start the Streamlit server and automatically open your web browser to 
 
 #### Running Tests
 ```bash
-# Run all tests
-python -m unittest discover -s . -p "test_*.py"
+# Using Poetry (recommended)
+poetry run poe test          # Run all tests
+poetry run poe test-cov      # Run tests with coverage report
+poetry run poe test-watch    # Run tests in watch mode
 
-# Run specific test file
-python -m unittest test_validation.py
+# Using pytest directly
+pytest -v                    # Run all tests with verbose output
+pytest test_validation.py    # Run specific test file
+pytest -k "test_validate"    # Run tests matching pattern
+pytest --cov=. --cov-report=html  # Run with coverage report
+
+# Run only unit tests
+pytest -m unit
+
+# Run tests excluding slow ones
+pytest -m "not slow"
 ```
 
 #### Code Quality
