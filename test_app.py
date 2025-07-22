@@ -56,8 +56,55 @@ class TestSetupSessionState:
         assert mock_session_state["faiss_max_threshold"] == 100.0
 
 
-# Skip complex Streamlit UI tests for now - focus on main logic
-# These would require more complex mocking of Streamlit's context managers
+@pytest.mark.unit
+class TestConfigureSidebar:
+    """Test cases for configure_sidebar function - simplified tests."""
+    
+    @patch('app.st')
+    @patch('app.validate_threshold_range')
+    @patch('app.validate_limit')
+    def test_configure_sidebar_validation_calls(self, mock_validate_limit, mock_validate_threshold, mock_st):
+        """Test that validation functions are called."""
+        # Mock streamlit components
+        mock_st.sidebar.expander.return_value.__enter__ = MagicMock()
+        mock_st.sidebar.expander.return_value.__exit__ = MagicMock()
+        mock_st.number_input.side_effect = [0.0, 100.0, 10]
+        mock_st.button.return_value = False
+        mock_st.session_state = {"faiss_min_threshold": 0.0, "faiss_max_threshold": 100.0, "limit": 10}
+        
+        # Mock validation returns
+        mock_validate_threshold.return_value = (True, None)
+        mock_validate_limit.return_value = (True, None)
+        
+        configure_sidebar()
+        
+        # Should call validation functions
+        mock_validate_threshold.assert_called_once_with(0.0, 100.0)
+        mock_validate_limit.assert_called_once_with(10)
+    
+    @patch('app.st')
+    @patch('app.validate_threshold_range')
+    @patch('app.validate_limit')
+    def test_configure_sidebar_invalid_inputs(self, mock_validate_limit, mock_validate_threshold, mock_st):
+        """Test sidebar behavior with invalid inputs."""
+        # Mock streamlit components
+        mock_st.sidebar.expander.return_value.__enter__ = MagicMock()
+        mock_st.sidebar.expander.return_value.__exit__ = MagicMock()
+        mock_st.number_input.side_effect = [50.0, 25.0, 0]  # Invalid values
+        mock_st.button.return_value = False
+        mock_st.session_state = {"faiss_min_threshold": 0.0, "faiss_max_threshold": 100.0, "limit": 10}
+        
+        # Mock validation returns - both invalid
+        mock_validate_threshold.return_value = (False, "Invalid threshold")
+        mock_validate_limit.return_value = (False, "Invalid limit")
+        
+        configure_sidebar()
+        
+        # Should show error messages
+        assert mock_st.error.call_count == 2
+        
+        # Button should be disabled
+        mock_st.button.assert_called_with("Find duplicate photos", disabled=True)
 
 
 @pytest.mark.unit

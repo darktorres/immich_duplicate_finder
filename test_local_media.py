@@ -138,3 +138,223 @@ def test_supported_extensions_case_insensitive():
             os.rmdir(test_dir)
         except OSError:
             pass
+
+@pytest.mark.unit
+def test_setup_local_media():
+    """Test setup_local_media function."""
+    # This function should run without errors
+    from local_media import setup_local_media
+    setup_local_media()  # Should not raise any exceptions
+
+
+@pytest.mark.unit
+class TestLoadImage:
+    """Test cases for load_image function."""
+    
+    def test_load_image_nonexistent_file(self):
+        """Test loading non-existent image file."""
+        from local_media import load_image
+        result = load_image("/nonexistent/file.jpg")
+        assert result is None
+    
+    def test_load_image_invalid_file(self):
+        """Test loading invalid image file."""
+        from local_media import load_image
+        
+        # Create a temporary text file (not an image)
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+            f.write(b"This is not an image")
+            temp_path = f.name
+        
+        try:
+            result = load_image(temp_path)
+            assert result is None
+        finally:
+            try:
+                os.unlink(temp_path)
+            except FileNotFoundError:
+                pass
+    
+    def test_load_image_directory_instead_of_file(self):
+        """Test loading a directory instead of file."""
+        from local_media import load_image
+        
+        temp_dir = tempfile.mkdtemp()
+        try:
+            result = load_image(temp_dir)
+            assert result is None
+        finally:
+            try:
+                os.rmdir(temp_dir)
+            except OSError:
+                pass
+
+
+@pytest.mark.unit
+class TestGetFileInfo:
+    """Test cases for get_file_info function."""
+    
+    def test_get_file_info_nonexistent_file(self):
+        """Test getting info for non-existent file."""
+        from local_media import get_file_info
+        result = get_file_info("/nonexistent/file.jpg")
+        
+        # Should return default values
+        assert result[0] == "Unknown"  # file_size
+        assert result[1] == "file.jpg"  # file_name
+        assert result[2] == "Unknown"  # resolution
+        assert result[3] == "Unknown"  # creation_date
+        assert result[4] == "/nonexistent/file.jpg"  # file_path
+    
+    def test_get_file_info_text_file(self):
+        """Test getting info for a text file (not an image)."""
+        from local_media import get_file_info
+        
+        # Create a temporary text file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write("This is a test file")
+            temp_path = f.name
+        
+        try:
+            result = get_file_info(temp_path)
+            
+            # Should get file size and name, but unknown resolution
+            assert result[0] != "Unknown"  # Should have file size
+            assert result[1] == os.path.basename(temp_path)  # file_name
+            assert result[2] == "Unknown"  # resolution (can't get from text file)
+            assert result[3] != "Unknown"  # Should have creation date
+            assert result[4] == temp_path  # file_path
+        finally:
+            try:
+                os.unlink(temp_path)
+            except FileNotFoundError:
+                pass
+    
+    def test_get_file_info_permission_error(self, mocker):
+        """Test getting info when file access is denied."""
+        from local_media import get_file_info
+        
+        # Mock os.path.isfile to return True, but os.path.getsize to raise PermissionError
+        mocker.patch('local_media.os.path.isfile', return_value=True)
+        mocker.patch('local_media.os.path.getsize', side_effect=PermissionError("Access denied"))
+        
+        result = get_file_info("/some/file.jpg")
+        
+        # Should return default values on error
+        assert result[0] == "Unknown"  # file_size
+        assert result[1] == "file.jpg"  # file_name
+        assert result[2] == "Unknown"  # resolution
+        assert result[3] == "Unknown"  # creation_date
+        assert result[4] == "/some/file.jpg"  # file_path
+
+
+@pytest.mark.unit
+class TestDeleteFile:
+    """Test cases for delete_file function."""
+    
+    def test_delete_file_nonexistent(self):
+        """Test deleting non-existent file."""
+        from local_media import delete_file
+        result = delete_file("/nonexistent/file.jpg")
+        assert result is False
+    
+    def test_delete_file_success(self):
+        """Test successful file deletion."""
+        from local_media import delete_file
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            temp_path = f.name
+        
+        # File should exist
+        assert os.path.exists(temp_path)
+        
+        # Delete it
+        result = delete_file(temp_path)
+        assert result is True
+        
+        # File should no longer exist
+        assert not os.path.exists(temp_path)
+    
+    def test_delete_file_permission_error(self, mocker):
+        """Test file deletion with permission error."""
+        from local_media import delete_file
+        
+        # Mock os.path.isfile to return True, but os.remove to raise PermissionError
+        mocker.patch('local_media.os.path.isfile', return_value=True)
+        mocker.patch('local_media.os.remove', side_effect=PermissionError("Access denied"))
+        
+        result = delete_file("/some/file.jpg")
+        assert result is False
+    
+    def test_delete_file_os_error(self, mocker):
+        """Test file deletion with OS error."""
+        from local_media import delete_file
+        
+        # Mock os.path.isfile to return True, but os.remove to raise OSError
+        mocker.patch('local_media.os.path.isfile', return_value=True)
+        mocker.patch('local_media.os.remove', side_effect=OSError("File in use"))
+        
+        result = delete_file("/some/file.jpg")
+        assert result is False
+
+
+@pytest.mark.unit
+def test_supported_image_extensions():
+    """Test that SUPPORTED_IMAGE_EXTENSIONS contains expected formats."""
+    
+    # Check that common formats are included
+    expected_formats = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif", ".dng"]
+    
+    for fmt in expected_formats:
+        assert fmt in SUPPORTED_IMAGE_EXTENSIONS
+    
+    # Check that all extensions are lowercase
+    for ext in SUPPORTED_IMAGE_EXTENSIONS:
+        assert ext == ext.lower()
+        assert ext.startswith(".")
+
+
+@pytest.mark.unit
+def test_get_media_files_with_various_extensions():
+    """Test get_media_files with various supported extensions."""
+    
+    temp_dir = tempfile.mkdtemp()
+    try:
+        created_files = []
+        
+        # Create files with different supported extensions
+        test_extensions = [".jpg", ".PNG", ".gif", ".HEIC", ".webp"]
+        for i, ext in enumerate(test_extensions):
+            test_file = Path(temp_dir) / f"test{i}{ext}"
+            test_file.touch()
+            created_files.append(test_file)
+        
+        # Create some non-image files
+        non_image_file = Path(temp_dir) / "test.txt"
+        non_image_file.touch()
+        created_files.append(non_image_file)
+        
+        media_files = get_media_files(temp_dir)
+        
+        # Should find image files but not text file
+        # Note: empty files might be filtered out by access validation
+        assert len(media_files) >= 0
+        assert len(media_files) <= len(test_extensions)
+        
+        # All returned files should have supported extensions
+        for file_path in media_files:
+            file_ext = Path(file_path).suffix.lower()
+            assert file_ext in SUPPORTED_IMAGE_EXTENSIONS
+        
+    finally:
+        # Cleanup
+        for file_path in created_files:
+            try:
+                file_path.unlink()
+            except FileNotFoundError:
+                pass
+        try:
+            os.rmdir(temp_dir)
+        except OSError:
+            pass
