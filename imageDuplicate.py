@@ -22,8 +22,11 @@ model.eval()  # Set model to evaluation mode
 
 
 def convert_image_to_rgb(image):
-    """Convert image to RGB if it's RGBA."""
-    if image.mode == "RGBA":
+    """
+    Converts a PIL Image to RGB format if it's not already.
+    This handles RGBA, P (palette), and L (grayscale) modes.
+    """
+    if image.mode != "RGB":
         return image.convert("RGB")
     return image
 
