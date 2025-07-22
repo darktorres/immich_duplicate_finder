@@ -6,8 +6,8 @@ import numpy as np
 import streamlit as st
 import torch
 from streamlit_image_comparison import image_comparison
-from torchvision.models import ResNet152_Weights, resnet152
-from torchvision.transforms import Compose, Normalize, Resize, ToTensor
+from torchvision.models import ViT_B_16_Weights, vit_b_16
+from torchvision.transforms import Compose
 
 from db import is_db_populated, load_duplicate_pairs, save_duplicate_pair
 from local_media import get_file_info, load_image
@@ -35,8 +35,9 @@ if device.type == "cuda":
         res = None
 # --- END SETUP ---
 
-# Load ResNet152 with pretrained weights
-model = resnet152(weights=ResNet152_Weights.DEFAULT)
+# Load vit_b_16 with pretrained weights
+weights = ViT_B_16_Weights.DEFAULT
+model = vit_b_16(weights=weights)
 model.to(device)  # Move model to the selected device
 model.eval()  # Set model to evaluation mode
 
@@ -51,12 +52,12 @@ def convert_image_to_rgb(image):
     return image
 
 
+vit_transforms = weights.transforms()
+
 transform = Compose(
     [
         convert_image_to_rgb,
-        Resize((224, 224)),  # Standard size for ImageNet-trained models
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        vit_transforms,
     ]
 )
 
