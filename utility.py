@@ -50,7 +50,7 @@ def display_asset_column(col, asset1_info, asset2_info, file_path_1, file_path_2
     """
     with col:
         st.markdown(details, unsafe_allow_html=True)
-        delete_button_key = f"delete-{file_path_1}"
+        delete_button_key = f"delete-{file_path_1}-paired-with-{file_path_2}"
         delete_button_label = f"Delete {asset1_info[1]}"
         if st.button(delete_button_label, key=delete_button_key):
             try:
