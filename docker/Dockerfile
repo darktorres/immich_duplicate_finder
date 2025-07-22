@@ -15,6 +15,10 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry config virtualenvs.create false \
  && poetry install --no-interaction --no-ansi
 
+# Replace faiss-cpu with faiss-gpu-cu12
+RUN pip uninstall -y faiss-cpu && \
+    pip install faiss-gpu-cu12[fix-cuda]
+
 # Copy application code
 COPY . .
 

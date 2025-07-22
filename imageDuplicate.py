@@ -16,8 +16,28 @@ from utility import display_asset_column
 # Set the environment variable to allow multiple OpenMP libraries
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+# --- GPU / DEVICE SETUP ---
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+else:
+    print("Using CPU")
+
+# --- FAISS GPU SETUP ---
+res = None
+if device.type == "cuda":
+    try:
+        res = faiss.StandardGpuResources()
+        print("FAISS GPU support enabled.")
+    except AttributeError:
+        print("Warning: faiss-gpu not installed. Falling back to CPU for FAISS.")
+        print("Install it with: pip install faiss-gpu-cuXX (e.g., faiss-gpu-cu12 for CUDA 12.1)")
+        res = None
+# --- END SETUP ---
+
 # Load ResNet152 with pretrained weights
 model = resnet152(weights=ResNet152_Weights.DEFAULT)
+model.to(device)  # Move model to the selected device
 model.eval()  # Set model to evaluation mode
 
 
@@ -47,16 +67,21 @@ metadata_path = "metadata.npy"
 
 def extract_features(image):
     """Extract features from an image using a pretrained model."""
-    image_tensor = transform(image).unsqueeze(0)  # Add batch dimension
+    image_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension
     with torch.no_grad():
         features = model(image_tensor)
-    return features.numpy().flatten()
+    return features.cpu().numpy().flatten()  # Move features to CPU before converting to numpy
 
 
 def init_or_load_faiss_index():
     """Initialize or load the FAISS index and metadata, ensuring index is ready for use."""
     if os.path.exists(index_path) and os.path.exists(metadata_path):
-        index = faiss.read_index(index_path)
+        cpu_index = faiss.read_index(index_path)
+        if res:
+            print("Moving FAISS index to GPU...")
+            index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+        else:
+            index = cpu_index
         metadata = np.load(metadata_path, allow_pickle=True).tolist()
     else:
         index = None
@@ -66,7 +91,13 @@ def init_or_load_faiss_index():
 
 def save_faiss_index_and_metadata(index, metadata):
     """Save the FAISS index and metadata to disk."""
-    faiss.write_index(index, index_path)
+    if res and hasattr(index, "getDevice"):  # Check if it is a GPU index
+        print("Moving FAISS index to CPU for saving...")
+        cpu_index = faiss.index_gpu_to_cpu(index)
+    else:
+        cpu_index = index
+
+    faiss.write_index(cpu_index, index_path)
     np.save(metadata_path, np.array(metadata, dtype=object))
 
 
@@ -87,7 +118,13 @@ def update_faiss_index(file_path):
     if index is None:
         # Initialize the FAISS index with the correct dimension if it's the first time
         dimension = features.shape[0]
-        index = faiss.IndexFlatL2(dimension)
+        cpu_index = faiss.IndexFlatL2(dimension)
+        if res:
+            print("Creating new FAISS index on GPU.")
+            index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+        else:
+            print("Creating new FAISS index on CPU.")
+            index = cpu_index
 
     index.add(np.array([features], dtype="float32"))
     existing_metadata.append(file_path)
