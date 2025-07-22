@@ -29,7 +29,8 @@ def temp_file():
         os.unlink(temp_file.name)
     except (OSError, FileNotFoundError):
         pass
-    
+
+
 def test_validate_folder_path_valid(temp_dir):
     """Test validation of valid folder path."""
     is_valid, error = validate_folder_path(temp_dir)
@@ -63,12 +64,16 @@ def test_validate_folder_path_file_not_dir(temp_file):
     is_valid, error = validate_folder_path(temp_file)
     assert is_valid is False
     assert "not a directory" in error
-    
-@pytest.mark.parametrize("min_val,max_val", [
-    (0.0, 100.0),
-    (10.5, 50.5),
-    (25.0, 75.0),
-])
+
+
+@pytest.mark.parametrize(
+    "min_val,max_val",
+    [
+        (0.0, 100.0),
+        (10.5, 50.5),
+        (25.0, 75.0),
+    ],
+)
 def test_validate_threshold_range_valid(min_val, max_val):
     """Test validation of valid threshold ranges."""
     is_valid, error = validate_threshold_range(min_val, max_val)
@@ -102,7 +107,8 @@ def test_validate_threshold_range_non_numeric():
     is_valid, error = validate_threshold_range("invalid", 50.0)
     assert is_valid is False
     assert "must be numeric" in error
-    
+
+
 @pytest.mark.parametrize("limit_val", [1, 10, 100, 500, 1000])
 def test_validate_limit_valid(limit_val):
     """Test validation of valid limits."""

@@ -11,11 +11,11 @@ from logger_config import logger
 def compare_and_color_data(value1: str, value2: str) -> str:
     """
     Compares two ISO date strings and colors them based on which is newer.
-    
+
     Args:
         value1: First date string
         value2: Second date string
-        
+
     Returns:
         HTML formatted string with color coding
     """
@@ -38,11 +38,11 @@ def compare_and_color_data(value1: str, value2: str) -> str:
 def compare_and_color(value1: str, value2: str) -> str:
     """
     Compares two values and colors them: green for higher, red for lower.
-    
+
     Args:
         value1: First value to compare
         value2: Second value to compare
-        
+
     Returns:
         HTML formatted string with color coding
     """
@@ -69,7 +69,7 @@ def display_asset_column(
 ) -> None:
     """
     Displays the information for a single asset (file) in a column.
-    
+
     Args:
         col: Streamlit column object
         asset1_info: Tuple of (file_size, file_name, resolution, creation_date, full_path)

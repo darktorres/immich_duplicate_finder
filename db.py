@@ -39,7 +39,7 @@ def startup_db_configurations() -> None:
 def load_settings_from_db() -> str:
     """
     Loads the media folder path from the settings database.
-    
+
     Returns:
         The folder path string, empty string if not found
     """
@@ -63,7 +63,7 @@ def load_settings_from_db() -> str:
 def save_settings_to_db(folder_path: str) -> None:
     """
     Saves the media folder path to the settings database.
-    
+
     Args:
         folder_path: The folder path to save
     """
@@ -112,7 +112,7 @@ def startup_processed_duplicate_faiss_db() -> None:
 def save_duplicate_pair(vector_id1: str, vector_id2: str, similarity: float) -> None:
     """
     Saves a pair of duplicate file paths to the database if it doesn't already exist.
-    
+
     Args:
         vector_id1: First file path
         vector_id2: Second file path
@@ -123,7 +123,7 @@ def save_duplicate_pair(vector_id1: str, vector_id2: str, similarity: float) -> 
     except (ValueError, TypeError) as e:
         logger.error(f"Invalid similarity value: {similarity}, error: {e}")
         return
-        
+
     conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
@@ -172,11 +172,11 @@ def delete_duplicate_pair(asset_id_1, asset_id_2):
 def load_duplicate_pairs(min_threshold: float, max_threshold: float) -> List[Tuple[str, str, float]]:
     """
     Load duplicate pairs with a similarity between the specified minimum and maximum thresholds.
-    
+
     Args:
         min_threshold: Minimum similarity threshold
         max_threshold: Maximum similarity threshold
-        
+
     Returns:
         List of tuples containing (vector_id1, vector_id2, similarity)
     """
@@ -186,7 +186,7 @@ def load_duplicate_pairs(min_threshold: float, max_threshold: float) -> List[Tup
         if not (0 <= min_threshold <= max_threshold <= 100):
             logger.error(f"Invalid thresholds: min={min_threshold}, max={max_threshold}")
             return []
-            
+
         conn = sqlite3.connect("duplicates.db")
         cursor = conn.cursor()
         # Adjust the SQL query to filter duplicates within the specified range
@@ -198,12 +198,12 @@ def load_duplicate_pairs(min_threshold: float, max_threshold: float) -> List[Tup
             (min_threshold, max_threshold),
         )
         duplicates = cursor.fetchall()
-        
+
         if not duplicates:
             logger.info(f"No duplicates found within thresholds {min_threshold} and {max_threshold}")
         else:
             logger.info(f"Found {len(duplicates)} duplicate pairs within thresholds")
-            
+
         return duplicates
     except sqlite3.Error as e:
         logger.error(f"Error loading duplicates: {e}")
@@ -216,7 +216,7 @@ def load_duplicate_pairs(min_threshold: float, max_threshold: float) -> List[Tup
 def is_db_populated() -> bool:
     """
     Check if the 'duplicates' table in the database has any entries.
-    
+
     Returns:
         True if database has entries, False otherwise
     """

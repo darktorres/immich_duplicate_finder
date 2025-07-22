@@ -20,10 +20,10 @@ def setup_local_media():
 def get_media_files(folder_path: str) -> List[str]:
     """
     Recursively finds all supported image files in a given folder.
-    
+
     Args:
         folder_path: Path to the folder to search
-        
+
     Returns:
         List of file paths to supported image files
     """
@@ -34,7 +34,7 @@ def get_media_files(folder_path: str) -> List[str]:
     filepaths = []
     try:
         logger.info(f"Scanning folder for media files: {folder_path}")
-        
+
         for root, _, files in os.walk(folder_path):
             for file in files:
                 if file.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS):
@@ -44,22 +44,22 @@ def get_media_files(folder_path: str) -> List[str]:
                         filepaths.append(full_path)
                     else:
                         logger.warning(f"File not accessible: {full_path}")
-                        
+
         logger.info(f"Found {len(filepaths)} media files in {folder_path}")
     except (OSError, PermissionError) as e:
         logger.error(f"Error accessing folder {folder_path}: {e}")
         return []
-    
+
     return filepaths
 
 
 def load_image(file_path: str) -> Optional[Image.Image]:
     """
     Loads an image from a file path into a Pillow Image object.
-    
+
     Args:
         file_path: Path to the image file
-        
+
     Returns:
         PIL Image object or None if loading fails
     """
@@ -67,7 +67,7 @@ def load_image(file_path: str) -> Optional[Image.Image]:
         if not os.path.isfile(file_path):
             logger.error(f"File does not exist: {file_path}")
             return None
-            
+
         image = Image.open(file_path)
         # load() is called to read the image data. This is important for some formats.
         image.load()
@@ -81,10 +81,10 @@ def load_image(file_path: str) -> Optional[Image.Image]:
 def bytes_to_megabytes(bytes_size: Optional[int]) -> str:
     """
     Converts bytes to megabytes (MB) and formats to 3 decimal places.
-    
+
     Args:
         bytes_size: Size in bytes
-        
+
     Returns:
         Formatted string with MB suffix
     """
@@ -97,10 +97,10 @@ def bytes_to_megabytes(bytes_size: Optional[int]) -> str:
 def get_file_info(file_path: str) -> Tuple[str, str, str, str, str]:
     """
     Gathers and returns information for a given file.
-    
+
     Args:
         file_path: Path to the file
-        
+
     Returns:
         Tuple of (file_size, file_name, resolution, creation_date, file_path)
     """
@@ -108,7 +108,7 @@ def get_file_info(file_path: str) -> Tuple[str, str, str, str, str]:
         if not os.path.isfile(file_path):
             logger.error(f"File does not exist: {file_path}")
             return "Unknown", os.path.basename(file_path), "Unknown", "Unknown", file_path
-            
+
         file_size = os.path.getsize(file_path)
         formatted_file_size = bytes_to_megabytes(file_size)
         file_name = os.path.basename(file_path)
@@ -135,10 +135,10 @@ def get_file_info(file_path: str) -> Tuple[str, str, str, str, str]:
 def delete_file(file_path: str) -> bool:
     """
     Deletes a file from the filesystem.
-    
+
     Args:
         file_path: Path to the file to delete
-        
+
     Returns:
         True if deletion was successful, False otherwise
     """
@@ -146,7 +146,7 @@ def delete_file(file_path: str) -> bool:
         if not os.path.isfile(file_path):
             logger.error(f"File does not exist: {file_path}")
             return False
-            
+
         os.remove(file_path)
         logger.info(f"Successfully deleted file: {file_path}")
         return True

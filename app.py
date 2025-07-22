@@ -86,12 +86,12 @@ def configure_sidebar() -> None:
             # Validate inputs
             threshold_valid, threshold_error = validate_threshold_range(min_threshold, max_threshold)
             limit_valid, limit_error = validate_limit(limit)
-            
+
             if not threshold_valid:
                 st.error(f"Threshold Error: {threshold_error}")
             if not limit_valid:
                 st.error(f"Limit Error: {limit_error}")
-            
+
             # Update session state only if valid
             if threshold_valid:
                 st.session_state["faiss_min_threshold"] = min_threshold
@@ -108,7 +108,7 @@ def configure_sidebar() -> None:
         # Display program version and additional data
         program_version = "v0.3.0-enhanced"
         st.markdown(f"**Version:** {program_version}")
-        
+
         # Show current log level
         current_log_level = logger.level
         log_level_name = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}.get(current_log_level, "UNKNOWN")
@@ -164,7 +164,7 @@ def main() -> None:
             )
             # Reset the flag after processing
             st.session_state["show_faiss_duplicate"] = False
-            
+
     except Exception as e:
         error_msg = f"Unexpected error in main application: {e}"
         logger.error(error_msg)

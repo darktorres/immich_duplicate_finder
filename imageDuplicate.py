@@ -50,10 +50,10 @@ def convert_image_to_rgb(image: Image.Image) -> Image.Image:
     """
     Converts a PIL Image to RGB format if it's not already.
     This handles RGBA, P (palette), and L (grayscale) modes.
-    
+
     Args:
         image: PIL Image object
-        
+
     Returns:
         PIL Image in RGB format
     """
@@ -80,10 +80,10 @@ metadata_path = "metadata.npy"
 def extract_features(image: Image.Image) -> np.ndarray:
     """
     Extract features from an image using a pretrained model.
-    
+
     Args:
         image: PIL Image object
-        
+
     Returns:
         Numpy array of extracted features
     """
@@ -102,7 +102,7 @@ def extract_features(image: Image.Image) -> np.ndarray:
 def init_or_load_faiss_index() -> Tuple[Optional[faiss.Index], List[str]]:
     """
     Initialize or load the FAISS index and metadata, ensuring index is ready for use.
-    
+
     Returns:
         Tuple of (FAISS index or None, metadata list)
     """
@@ -130,7 +130,7 @@ def init_or_load_faiss_index() -> Tuple[Optional[faiss.Index], List[str]]:
 def save_faiss_index_and_metadata(index: faiss.Index, metadata: List[str]) -> None:
     """
     Save the FAISS index and metadata to disk.
-    
+
     Args:
         index: FAISS index to save
         metadata: List of file paths corresponding to index entries
@@ -370,7 +370,7 @@ def show_duplicate_photos_faiss(limit, min_threshold, max_threshold):
                 st.markdown("---")
             except Exception as e:
                 st.write(f"Error processing duplicate pair: {str(e)}")
-                print(f"Error processing duplicate pair {i+1}: {e}")
+                print(f"Error processing duplicate pair {i + 1}: {e}")
         progress_bar.progress(100)
     else:
         st.write("No duplicates found.")

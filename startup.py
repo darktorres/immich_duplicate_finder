@@ -8,7 +8,7 @@ from validation import validate_folder_path
 def startup_sidebar() -> str:
     """
     Configures the Streamlit sidebar for settings and returns the media folder path.
-    
+
     Returns:
         The configured media folder path
     """
@@ -16,7 +16,7 @@ def startup_sidebar() -> str:
 
     with st.sidebar.expander("Settings", expanded=True):
         new_folder_path = st.text_input("Media Folder Path", folder_path)
-        
+
         # Validate the folder path in real-time
         if new_folder_path and new_folder_path != folder_path:
             is_valid, error_msg = validate_folder_path(new_folder_path)
