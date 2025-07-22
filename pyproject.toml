@@ -26,6 +26,7 @@ ruff = "^0.12.4"
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 pytest-mock = "^3.14.0"
+pytest-asyncio = "^0.24.0"
 
 [[tool.poetry.source]]
 name = "pytorch"
@@ -61,34 +62,32 @@ cmd = "pytest -f -v"
 line-length = 140
 target-version = "py312"
 fix = true
-lint.select = ["E", "F", "B", "I"]  # E=pycodestyle, F=pyflakes, B=bugbear, I=import sort
+lint.select = [
+    "E",
+    "F",
+    "B",
+    "I",
+] # E=pycodestyle, F=pyflakes, B=bugbear, I=import sort
 exclude = ["__pycache__", ".venv", "dist"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --strict-markers --strict-config"
-testpaths = [
-    ".",
-]
-python_files = [
-    "test_*.py",
-    "*_test.py",
-]
-python_classes = [
-    "Test*",
-]
-python_functions = [
-    "test_*",
-]
+testpaths = ["."]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "asyncio: marks tests as async tests",
 ]
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
 ]
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["."]
