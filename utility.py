@@ -2,13 +2,17 @@ from datetime import datetime
 
 import streamlit as st
 
-from api import deleteAsset
 from db import delete_duplicate_pair
+from local_media import delete_file
 
 
 def compare_and_color_data(value1, value2):
-    date1 = datetime.fromisoformat(value1.rstrip("Z"))
-    date2 = datetime.fromisoformat(value2.rstrip("Z"))
+    """Compares two ISO date strings and colors them based on which is newer."""
+    try:
+        date1 = datetime.fromisoformat(value1.rstrip("Z"))
+        date2 = datetime.fromisoformat(value2.rstrip("Z"))
+    except (ValueError, AttributeError):
+        return f"{value1}"  # Return unformatted if parsing fails
 
     # Compare the datetime objects
     if date1 > date2:  # value1 is newer
@@ -20,42 +24,41 @@ def compare_and_color_data(value1, value2):
 
 
 def compare_and_color(value1, value2):
-    if value1 > value2:
-        return f"<span style='color: green;'>{value1}</span>"
-    elif value1 < value2:
-        return f"<span style='color: red;'>{value1}</span>"
-    else:
-        return f"{value1}"
+    """Compares two values and colors them: green for higher, red for lower."""
+    try:
+        # Extract numeric part for comparison (e.g., from "12.345 MB")
+        num1 = float(str(value1).split()[0])
+        num2 = float(str(value2).split()[0])
+        if num1 > num2:
+            return f"<span style='color: green;'>{value1}</span>"
+        elif num1 < num2:
+            return f"<span style='color: red;'>{value1}</span>"
+    except (ValueError, IndexError):
+        pass  # Fallback for non-numeric or unparseable values
+    return f"{value1}"
 
 
-def display_asset_column(col, asset1_info, asset2_info, asset_id_1, asset_id_2, server_url, api_key):
+def display_asset_column(col, asset1_info, asset2_info, file_path_1, file_path_2):
+    """Displays the information for a single asset (file) in a column."""
+    # asset_info = (formatted_file_size, file_name, resolution, creation_date, full_path)
     details = f"""
     - **File name:** {asset1_info[1]}
-    - **Photo with ID:** {asset_id_1}
     - **Size:** {compare_and_color(asset1_info[0], asset2_info[0])}
     - **Resolution:** {compare_and_color(asset1_info[2], asset2_info[2])}
-    - **Lens Model:** {asset1_info[3]}
-    - **Created At:** {compare_and_color_data(asset1_info[4], asset2_info[4])}
-    - **Original Path:** {asset1_info[5]}
-    - **Is Offline:** {"Yes" if asset1_info[6] else "No"}
-    - **Is Trashed:** {"Yes" if asset1_info[7] else "No"}
-    - **Is Favorite:** {"Yes" if asset1_info[8] else "No"}
+    - **Modified Date:** {compare_and_color_data(asset1_info[3], asset2_info[3])}
+    - **Path:** `{asset1_info[4]}`
     """
     with col:
         st.markdown(details, unsafe_allow_html=True)
-        delete_button_key = f"delete-{asset_id_1}"
-        delete_button_label = f"Delete {asset_id_1}"
+        delete_button_key = f"delete-{file_path_1}"
+        delete_button_label = f"Delete {asset1_info[1]}"
         if st.button(delete_button_label, key=delete_button_key):
             try:
-                if deleteAsset(server_url, asset_id_1, api_key):
-                    st.success(f"Deleted photo {asset_id_1}")
-                    st.session_state[f"deleted_photo_{asset_id_1}"] = True
-                    st.session_state["show_faiss_duplicate"] = True
-                    st.session_state["generate_db_duplicate"] = False
-                    # remove from asset db
-                    delete_duplicate_pair(asset_id_1, asset_id_2)
+                if delete_file(file_path_1):
+                    st.success(f"Deleted photo: {file_path_1}")
+                    delete_duplicate_pair(file_path_1, file_path_2)
+                    st.rerun()  # Rerun to refresh the view
                 else:
-                    st.error(f"Failed to delete photo {asset_id_1}")
+                    st.error(f"Failed to delete photo: {file_path_1}")
             except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
-                print(f"Failed to delete photo {asset_id_1}: {str(e)}")
+                st.error(f"An error occurred while deleting: {str(e)}")

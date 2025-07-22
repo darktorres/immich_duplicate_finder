@@ -1,10 +1,15 @@
-name: immich-duplicate-finder
+name: local-duplicate-finder
 services:
-  immich-duplicate-finder:
-    container_name: immich-duplicate-finder
-    hostname: immich-duplicate-finder
+  local-duplicate-finder:
+    container_name: local-duplicate-finder
+    hostname: local-duplicate-finder
     restart: unless-stopped
     ports:
       - 8501:8501
     build:
       dockerfile: './Dockerfile'
+    volumes:
+      # Mount your local pictures folder into the container
+      # - /path/to/your/pictures:/pictures
+      # Mount a local folder to persist the database and index files
+      - ./data:/app/data

@@ -9,8 +9,8 @@ from streamlit_image_comparison import image_comparison
 from torchvision.models import ResNet152_Weights, resnet152
 from torchvision.transforms import Compose, Normalize, Resize, ToTensor
 
-from api import getAssetInfo, getImage
 from db import is_db_populated, load_duplicate_pairs, save_duplicate_pair
+from local_media import get_file_info, load_image
 from utility import display_asset_column
 
 # Set the environment variable to allow multiple OpenMP libraries
@@ -67,21 +67,19 @@ def save_faiss_index_and_metadata(index, metadata):
     np.save(metadata_path, np.array(metadata, dtype=object))
 
 
-def update_faiss_index(immich_server_url, api_key, asset_id):
-    """Update the FAISS index and metadata with a new image and its ID,
-    skipping if the asset_id has already been processed."""
+def update_faiss_index(file_path):
+    """Update the FAISS index and metadata with a new image and its path."""
     global index  # Assuming index is defined globally
     index, existing_metadata = init_or_load_faiss_index()
 
-    # Check if the asset_id is already in metadata to decide whether to skip processing
-    if asset_id in existing_metadata:
-        return "skipped"  # Skip processing this image
+    if file_path in existing_metadata:
+        return "skipped"
 
-    image = getImage(asset_id, immich_server_url, "Thumbnail (fast)", api_key)
-    if image is not None:
-        features = extract_features(image)
-    else:
+    image = load_image(file_path)
+    if image is None:
         return "error"
+
+    features = extract_features(image)
 
     if index is None:
         # Initialize the FAISS index with the correct dimension if it's the first time
@@ -89,13 +87,13 @@ def update_faiss_index(immich_server_url, api_key, asset_id):
         index = faiss.IndexFlatL2(dimension)
 
     index.add(np.array([features], dtype="float32"))
-    existing_metadata.append(asset_id)
+    existing_metadata.append(file_path)
 
     save_faiss_index_and_metadata(index, existing_metadata)
     return "processed"
 
 
-def calculateFaissIndex(assets, immich_server_url, api_key):
+def calculateFaissIndex(media_files):
     # Initialize session state variables if they are not already set
     if "message" not in st.session_state:
         st.session_state["message"] = ""
@@ -114,48 +112,47 @@ def calculateFaissIndex(assets, immich_server_url, api_key):
         st.session_state["stop_index"] = True
         st.session_state["calculate_faiss"] = False
 
-    total_assets = len(assets)
-    processed_assets = 0
-    skipped_assets = 0
-    error_assets = 0
+    total_files = len(media_files)
+    processed_files = 0
+    skipped_files = 0
+    error_files = 0
     total_time = 0
 
-    for i, asset in enumerate(assets):
+    for i, file_path in enumerate(media_files):
         if st.session_state["stop_index"]:
             st.session_state["message"] = "Processing stopped by user."
             message_placeholder.text(st.session_state["message"])
             break  # Break the loop if stop is requested
 
-        asset_id = asset.get("id")
         start_time = time.time()
 
-        status = update_faiss_index(immich_server_url, api_key, asset_id)
+        status = update_faiss_index(file_path)
         if status == "processed":
-            processed_assets += 1
+            processed_files += 1
         elif status == "skipped":
-            skipped_assets += 1
+            skipped_files += 1
         elif status == "error":
-            error_assets += 1
+            error_files += 1
 
         end_time = time.time()
         processing_time = end_time - start_time
         total_time += processing_time
 
         # Update progress and messages
-        progress_percentage = (i + 1) / total_assets
+        progress_percentage = (i + 1) / total_files
         st.session_state["progress"] = progress_percentage
         progress_bar.progress(progress_percentage)
-        estimated_time_remaining = (total_time / (i + 1)) * (total_assets - (i + 1))
+        estimated_time_remaining = (total_time / (i + 1)) * (total_files - (i + 1))
         estimated_time_remaining_min = int(estimated_time_remaining / 60)
 
         st.session_state["message"] = (
-            f"Processing asset {i + 1}/{total_assets} - (Processed: {processed_assets}, Skipped: {skipped_assets}, Errors: {error_assets}). Estimated time remaining: {estimated_time_remaining_min} minutes."
+            f"Processing file {i + 1}/{total_files} - (Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}). Estimated time remaining: {estimated_time_remaining_min} minutes."
         )
         message_placeholder.text(st.session_state["message"])
 
     # Reset stop flag at the end of processing
     st.session_state["stop_index"] = False
-    if processed_assets >= total_assets:
+    if processed_files >= total_files:
         st.session_state["message"] = "Processing complete!"
         message_placeholder.text(st.session_state["message"])
         progress_bar.progress(1.0)
@@ -213,7 +210,7 @@ def generate_db_duplicate():
     progress_bar.empty()
 
 
-def show_duplicate_photos_faiss(assets, limit, min_threshold, max_threshold, immich_server_url, api_key):
+def show_duplicate_photos_faiss(limit, min_threshold, max_threshold):
     # First check if the database is populated
     if not is_db_populated():
         st.write("The database does not contain any duplicate entries. Please generate/update the database.")
@@ -236,15 +233,15 @@ def show_duplicate_photos_faiss(assets, limit, min_threshold, max_threshold, imm
                     st.session_state["generate_db_duplicate"] = False
                     break  # Exit the loop
 
+                file_path_1, file_path_2 = dup_pair
+
                 progress = (i + 1) / num_duplicates_to_show
                 progress_bar.progress(progress)
 
-                asset_id_1, asset_id_2 = dup_pair
-
-                image1 = getImage(asset_id_1, immich_server_url, "Thumbnail (fast)", api_key)
-                image2 = getImage(asset_id_2, immich_server_url, "Thumbnail (fast)", api_key)
-                asset1_info = getAssetInfo(asset_id_1, assets)
-                asset2_info = getAssetInfo(asset_id_2, assets)
+                image1 = load_image(file_path_1)
+                image2 = load_image(file_path_2)
+                asset1_info = get_file_info(file_path_1)
+                asset2_info = get_file_info(file_path_2)
 
                 if image1 is not None and image2 is not None:
                     # Convert PIL images to numpy arrays if necessary
@@ -254,8 +251,8 @@ def show_duplicate_photos_faiss(assets, limit, min_threshold, max_threshold, imm
                     image_comparison(
                         img1=image1,
                         img2=image2,
-                        label1=f"Name: {asset_id_1}",
-                        label2=f"Name: {asset_id_2}",
+                        label1=os.path.basename(file_path_1),
+                        label2=os.path.basename(file_path_2),
                         width=700,
                         starting_position=50,
                         show_labels=True,
@@ -269,10 +266,10 @@ def show_duplicate_photos_faiss(assets, limit, min_threshold, max_threshold, imm
                     #    with col2:
                     #        st.image(image2, caption=f"Name: {asset_id_2}")
 
-                    display_asset_column(col1, asset1_info, asset2_info, asset_id_1, asset_id_2, immich_server_url, api_key)
-                    display_asset_column(col2, asset2_info, asset1_info, asset_id_2, asset_id_1, immich_server_url, api_key)
+                    display_asset_column(col1, asset1_info, asset2_info, file_path_1, file_path_2)
+                    display_asset_column(col2, asset2_info, asset1_info, file_path_2, file_path_1)
                 else:
-                    st.write(f"Missing information for one or both assets: {asset_id_1}, {asset_id_2}")
+                    st.write(f"Missing information for one or both assets: {file_path_1}, {file_path_2}")
 
                 st.markdown("---")
             except:

@@ -2,9 +2,9 @@ import os
 
 import streamlit as st
 
-from api import fetchAssets
-from db import startup_db_configurations, startup_processed_assets_db, startup_processed_duplicate_faiss_db
+from db import startup_db_configurations, startup_processed_duplicate_faiss_db
 from imageDuplicate import calculateFaissIndex, generate_db_duplicate, show_duplicate_photos_faiss
+from local_media import get_media_files, setup_local_media
 from startup import startup_sidebar
 
 # Set the environment variable to allow multiple OpenMP libraries
@@ -12,31 +12,19 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 ###############STARTUP#####################
 
 # Set page title and favicon
-st.set_page_config(page_title="Immich duplicator finder ", page_icon="https://immich.app/img/immich-logo-stacked-dark.svg")
+st.set_page_config(page_title="Local duplicator finder ", page_icon="🖼️")
 
 startup_db_configurations()
-startup_processed_assets_db()
 startup_processed_duplicate_faiss_db()
-immich_server_url, api_key, timeout = startup_sidebar()
+setup_local_media()
 
 
 def setup_session_state():
     """Initialize session state with default values."""
     session_defaults = {
-        "enable_size_filter": True,
-        "size_ratio": 5,
-        "deleted_photo": False,
-        "filter_nr": 10,
-        "show_duplicates": False,
         "calculate_faiss": False,
         "generate_db_duplicate": False,
         "show_faiss_duplicate": False,
-        "avoid_thumbnail_jpeg": True,
-        "is_trashed": False,
-        "is_favorite": True,
-        "stop_process": False,
-        "stop_index": False,
-        "photo_choice": "Thumbnail (fast)",  # Initialize with default action to not show duplicates
     }
     for key, default_value in session_defaults.items():
         if key not in st.session_state:
@@ -46,7 +34,6 @@ def setup_session_state():
 def configure_sidebar():
     """Configure the sidebar for user inputs."""
     with st.sidebar:
-        st.markdown("---")
         with st.expander("Image Duplicate Finder", expanded=True):
             # Button to generate/update the FAISS index
             if st.button("Create/Update FAISS index"):
@@ -88,48 +75,42 @@ def configure_sidebar():
             if st.button("Find duplicate photos"):
                 st.session_state["show_faiss_duplicate"] = True
 
-        with st.expander("Video Duplicate Finder", expanded=True):
-            # Button to generate/update the FAISS index
-            if st.button("Find duplicate video"):
-                st.info("Coming function")
-
         st.markdown("---")
         # Display program version and additional data
-        program_version = "v0.1.3"
-        additional_data = "Immich duplicator finder"
-        st.markdown(f"**Version:** {program_version}\n\n{additional_data}")
+        program_version = "v0.2.0-local"
+        st.markdown(f"**Version:** {program_version}")
 
 
 def main():
-    # print(fetchAssets(immich_server_url, api_key,timeout, 'VIDEO'))
     setup_session_state()
     configure_sidebar()
-    assets = None
+    folder_path = startup_sidebar()
 
-    # Attempt to fetch assets if any asset-related operation is to be performed
+    # Check for folder path validity if an action is triggered
     if st.session_state["calculate_faiss"] or st.session_state["generate_db_duplicate"] or st.session_state["show_faiss_duplicate"]:
-        assets = fetchAssets(immich_server_url, api_key, timeout, "IMAGE")
-        if not assets:
-            st.error("No assets found or failed to fetch assets.")
+        if not folder_path or not os.path.isdir(folder_path):
+            st.error("Please configure a valid media folder path in the sidebar settings.")
             return  # Stop further execution since there are no assets to process
 
     # Calculate the FAISS index if the corresponding flag is set
-    if st.session_state["calculate_faiss"] and assets:
-        calculateFaissIndex(assets, immich_server_url, api_key)
+    if st.session_state["calculate_faiss"]:
+        media_files = get_media_files(folder_path)
+        if media_files:
+            st.write(f"Found {len(media_files)} image files to process.")
+            calculateFaissIndex(media_files)
+        else:
+            st.warning("No image files found in the specified folder.")
 
     # Show FAISS duplicate photos if the corresponding flag is set
     if st.session_state["generate_db_duplicate"]:
         generate_db_duplicate()
 
     # Show FAISS duplicate photos if the corresponding flag is set
-    if st.session_state["show_faiss_duplicate"] and assets:
+    if st.session_state["show_faiss_duplicate"]:
         show_duplicate_photos_faiss(
-            assets,
             st.session_state["limit"],
             st.session_state["faiss_min_threshold"],
             st.session_state["faiss_max_threshold"],
-            immich_server_url,
-            api_key,
         )
 
 
