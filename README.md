@@ -40,20 +40,68 @@ git clone https://github.com/vale46n1/immich_duplicate_finder.git
 
 ### Install Dependencies
 
-Navigate to the cloned repository's directory and install the required dependencies using the provided `requirements.txt` file:
+Navigate to the cloned repository's directory and install the required dependencies. You can use either Poetry (recommended) or pip:
 
+#### Using Poetry (Recommended)
+```bash
+cd immich_duplicate_finder
+poetry install
+poetry shell  # Activate the virtual environment
+```
+
+#### Using pip
 ```bash
 cd immich_duplicate_finder
 pip install -r requirements.txt
 ```
+
 This command installs all necessary Python packages that "Immich Duplicate Finder" relies on.
 
+#### GPU Support (Optional)
+For better performance, you can install GPU support:
+```bash
+# For CUDA 12.6 (adjust version as needed)
+pip install faiss-gpu==1.11.0.post1
+pip install torch==2.7.1+cu126 torchvision==0.22.1+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+```
+
 ### Launch the App
-With the dependencies installed, you can now launch the Streamlit app. Execute the following command:
+With the dependencies installed, you can now launch the Streamlit app:
+
+#### Using Poetry
+```bash
+poetry run poe streamlit
+```
+
+#### Using Streamlit directly
 ```bash
 streamlit run app.py
 ```
+
 This will start the Streamlit server and automatically open your web browser to the app's page. Alternatively, Streamlit will provide a local URL you can visit to view the app.
+
+### Development
+
+#### Running Tests
+```bash
+# Run all tests
+python -m unittest discover -s . -p "test_*.py"
+
+# Run specific test file
+python -m unittest test_validation.py
+```
+
+#### Code Quality
+```bash
+# Using Poetry
+poetry run poe lint    # Check and fix linting issues
+poetry run poe format  # Format code
+poetry run poe check   # Check without making changes
+
+# Using ruff directly
+ruff check --fix .
+ruff format .
+```
 
 ### Docker setup
 

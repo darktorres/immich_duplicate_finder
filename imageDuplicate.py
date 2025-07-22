@@ -1,16 +1,19 @@
 import os
 import time
+from typing import List, Optional, Tuple
 
 import faiss
 import numpy as np
 import streamlit as st
 import torch
+from PIL import Image
 from streamlit_image_comparison import image_comparison
 from torchvision.models import ViT_B_16_Weights, vit_b_16
 from torchvision.transforms import Compose
 
 from db import is_db_populated, load_duplicate_pairs, save_duplicate_pair
 from local_media import get_file_info, load_image
+from logger_config import logger
 from utility import display_asset_column
 
 # Set the environment variable to allow multiple OpenMP libraries
@@ -19,19 +22,20 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # --- GPU / DEVICE SETUP ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
-    print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    gpu_name = torch.cuda.get_device_name(0)
+    logger.info(f"Using GPU: {gpu_name}")
 else:
-    print("Using CPU")
+    logger.info("Using CPU for PyTorch operations")
 
 # --- FAISS GPU SETUP ---
-res = None
+res: Optional[faiss.StandardGpuResources] = None
 if device.type == "cuda":
     try:
         res = faiss.StandardGpuResources()
-        print("FAISS GPU support enabled.")
+        logger.info("FAISS GPU support enabled")
     except AttributeError:
-        print("Warning: faiss-gpu not installed. Falling back to CPU for FAISS.")
-        print("Install it with: pip install faiss-gpu-cuXX (e.g., faiss-gpu-cu12 for CUDA 12.1)")
+        logger.warning("faiss-gpu not installed. Falling back to CPU for FAISS")
+        logger.info("Install it with: pip install faiss-gpu-cuXX (e.g., faiss-gpu-cu12 for CUDA 12.1)")
         res = None
 # --- END SETUP ---
 
@@ -42,12 +46,19 @@ model.to(device)  # Move model to the selected device
 model.eval()  # Set model to evaluation mode
 
 
-def convert_image_to_rgb(image):
+def convert_image_to_rgb(image: Image.Image) -> Image.Image:
     """
     Converts a PIL Image to RGB format if it's not already.
     This handles RGBA, P (palette), and L (grayscale) modes.
+    
+    Args:
+        image: PIL Image object
+        
+    Returns:
+        PIL Image in RGB format
     """
     if image.mode != "RGB":
+        logger.debug(f"Converting image from {image.mode} to RGB")
         return image.convert("RGB")
     return image
 
@@ -66,40 +77,77 @@ index_path = "faiss_index.bin"
 metadata_path = "metadata.npy"
 
 
-def extract_features(image):
-    """Extract features from an image using a pretrained model."""
-    image_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension
-    with torch.no_grad():
-        features = model(image_tensor)
-    return features.cpu().numpy().flatten()  # Move features to CPU before converting to numpy
+def extract_features(image: Image.Image) -> np.ndarray:
+    """
+    Extract features from an image using a pretrained model.
+    
+    Args:
+        image: PIL Image object
+        
+    Returns:
+        Numpy array of extracted features
+    """
+    try:
+        image_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension
+        with torch.no_grad():
+            features = model(image_tensor)
+        result = features.cpu().numpy().flatten()  # Move features to CPU before converting to numpy
+        logger.debug(f"Extracted features with shape: {result.shape}")
+        return result
+    except Exception as e:
+        logger.error(f"Error extracting features from image: {e}")
+        raise
 
 
-def init_or_load_faiss_index():
-    """Initialize or load the FAISS index and metadata, ensuring index is ready for use."""
-    if os.path.exists(index_path) and os.path.exists(metadata_path):
-        cpu_index = faiss.read_index(index_path)
-        if res:
-            print("Moving FAISS index to GPU...")
-            index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+def init_or_load_faiss_index() -> Tuple[Optional[faiss.Index], List[str]]:
+    """
+    Initialize or load the FAISS index and metadata, ensuring index is ready for use.
+    
+    Returns:
+        Tuple of (FAISS index or None, metadata list)
+    """
+    try:
+        if os.path.exists(index_path) and os.path.exists(metadata_path):
+            logger.info("Loading existing FAISS index and metadata")
+            cpu_index = faiss.read_index(index_path)
+            if res:
+                logger.info("Moving FAISS index to GPU")
+                index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
+            else:
+                index = cpu_index
+            metadata = np.load(metadata_path, allow_pickle=True).tolist()
+            logger.info(f"Loaded FAISS index with {len(metadata)} entries")
         else:
-            index = cpu_index
-        metadata = np.load(metadata_path, allow_pickle=True).tolist()
-    else:
-        index = None
-        metadata = []
-    return index, metadata
+            logger.info("No existing FAISS index found, will create new one")
+            index = None
+            metadata = []
+        return index, metadata
+    except Exception as e:
+        logger.error(f"Error loading FAISS index: {e}")
+        return None, []
 
 
-def save_faiss_index_and_metadata(index, metadata):
-    """Save the FAISS index and metadata to disk."""
-    if res and hasattr(index, "getDevice"):  # Check if it is a GPU index
-        print("Moving FAISS index to CPU for saving...")
-        cpu_index = faiss.index_gpu_to_cpu(index)
-    else:
-        cpu_index = index
+def save_faiss_index_and_metadata(index: faiss.Index, metadata: List[str]) -> None:
+    """
+    Save the FAISS index and metadata to disk.
+    
+    Args:
+        index: FAISS index to save
+        metadata: List of file paths corresponding to index entries
+    """
+    try:
+        if res and hasattr(index, "getDevice"):  # Check if it is a GPU index
+            logger.debug("Moving FAISS index to CPU for saving")
+            cpu_index = faiss.index_gpu_to_cpu(index)
+        else:
+            cpu_index = index
 
-    faiss.write_index(cpu_index, index_path)
-    np.save(metadata_path, np.array(metadata, dtype=object))
+        faiss.write_index(cpu_index, index_path)
+        np.save(metadata_path, np.array(metadata, dtype=object))
+        logger.debug(f"Saved FAISS index with {len(metadata)} entries")
+    except Exception as e:
+        logger.error(f"Error saving FAISS index: {e}")
+        raise
 
 
 def update_faiss_index(file_path):

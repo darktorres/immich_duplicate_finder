@@ -1,53 +1,93 @@
 import sqlite3
+from typing import List, Optional, Tuple
+
+from logger_config import logger
 
 #############DATABASE###################
 
 
-def startup_db_configurations():
+def startup_db_configurations() -> None:
     """Initializes the settings database and table."""
-    conn = sqlite3.connect("settings.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            folder_path TEXT
-        )
-    """)
+    conn = None
+    try:
+        conn = sqlite3.connect("settings.db")
+        c = conn.cursor()
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                folder_path TEXT
+            )
+        """)
 
-    # Check if the table is empty
-    c.execute("SELECT COUNT(*) FROM settings")
-    if c.fetchone()[0] == 0:
-        # Insert default settings, setting timeout to 1500 ms
-        c.execute("INSERT INTO settings (folder_path) VALUES (?)", ("",))
+        # Check if the table is empty
+        c.execute("SELECT COUNT(*) FROM settings")
+        if c.fetchone()[0] == 0:
+            # Insert default settings
+            c.execute("INSERT INTO settings (folder_path) VALUES (?)", ("",))
+            logger.info("Initialized settings database with default values")
 
-    # Commit changes and close the connection
-    conn.commit()
-    conn.close()
-
-
-def load_settings_from_db():
-    """Loads the media folder path from the settings database."""
-    conn = sqlite3.connect("settings.db")
-    c = conn.cursor()
-    c.execute("SELECT folder_path FROM settings LIMIT 1")
-    settings = c.fetchone()
-    conn.close()
-    return settings[0] if settings else ""
+        # Commit changes
+        conn.commit()
+        logger.debug("Settings database initialized successfully")
+    except sqlite3.Error as e:
+        logger.error(f"Error initializing settings database: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 
-def save_settings_to_db(folder_path):
-    """Saves the media folder path to the settings database."""
-    conn = sqlite3.connect("settings.db")
-    c = conn.cursor()
-    # Assumes a single row of settings; clears existing and inserts the new path.
-    c.execute("DELETE FROM settings")
-    c.execute("INSERT INTO settings (folder_path) VALUES (?)", (folder_path,))
-    conn.commit()
-    conn.close()
+def load_settings_from_db() -> str:
+    """
+    Loads the media folder path from the settings database.
+    
+    Returns:
+        The folder path string, empty string if not found
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect("settings.db")
+        c = conn.cursor()
+        c.execute("SELECT folder_path FROM settings LIMIT 1")
+        settings = c.fetchone()
+        result = settings[0] if settings else ""
+        logger.debug(f"Loaded folder path from database: {result}")
+        return result
+    except sqlite3.Error as e:
+        logger.error(f"Error loading settings from database: {e}")
+        return ""
+    finally:
+        if conn:
+            conn.close()
+
+
+def save_settings_to_db(folder_path: str) -> None:
+    """
+    Saves the media folder path to the settings database.
+    
+    Args:
+        folder_path: The folder path to save
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect("settings.db")
+        c = conn.cursor()
+        # Assumes a single row of settings; clears existing and inserts the new path.
+        c.execute("DELETE FROM settings")
+        c.execute("INSERT INTO settings (folder_path) VALUES (?)", (folder_path,))
+        conn.commit()
+        logger.info(f"Saved folder path to database: {folder_path}")
+    except sqlite3.Error as e:
+        logger.error(f"Error saving settings to database: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 
 ####################### FAISS #############################
-def startup_processed_duplicate_faiss_db():
+def startup_processed_duplicate_faiss_db() -> None:
     """Initializes the duplicates database with a corrected schema."""
+    conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
         cursor = conn.cursor()
@@ -60,15 +100,30 @@ def startup_processed_duplicate_faiss_db():
         )"""
         cursor.execute(sql)
         conn.commit()
-    except Exception as e:
-        print("Error creating database/table:", e)
+        logger.debug("Duplicates database initialized successfully")
+    except sqlite3.Error as e:
+        logger.error(f"Error creating duplicates database/table: {e}")
+        raise
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
-def save_duplicate_pair(vector_id1, vector_id2, similarity):
-    """Saves a pair of duplicate file paths to the database if it doesn't already exist."""
-    similarity = float(similarity)
+def save_duplicate_pair(vector_id1: str, vector_id2: str, similarity: float) -> None:
+    """
+    Saves a pair of duplicate file paths to the database if it doesn't already exist.
+    
+    Args:
+        vector_id1: First file path
+        vector_id2: Second file path
+        similarity: Similarity score between the files
+    """
+    try:
+        similarity = float(similarity)
+    except (ValueError, TypeError) as e:
+        logger.error(f"Invalid similarity value: {similarity}, error: {e}")
+        return
+        
     conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
@@ -80,14 +135,15 @@ def save_duplicate_pair(vector_id1, vector_id2, similarity):
             (vector_id1, vector_id2, vector_id2, vector_id1),
         )
         if cursor.fetchone():
-            # print("Duplicate pair already exists.")
+            logger.debug(f"Duplicate pair already exists: {vector_id1} <-> {vector_id2}")
             return
 
         # If not, insert the new pair
         cursor.execute("INSERT INTO duplicates (vector_id1, vector_id2, similarity) VALUES (?, ?, ?)", (vector_id1, vector_id2, similarity))
         conn.commit()
-    except Exception as e:
-        print("Error inserting duplicate pair:", e)
+        logger.debug(f"Saved duplicate pair: {vector_id1} <-> {vector_id2} (similarity: {similarity:.4f})")
+    except sqlite3.Error as e:
+        logger.error(f"Error inserting duplicate pair: {e}")
     finally:
         if conn:
             conn.close()
@@ -113,9 +169,24 @@ def delete_duplicate_pair(asset_id_1, asset_id_2):
             conn.close()
 
 
-def load_duplicate_pairs(min_threshold, max_threshold):
-    """Load duplicate pairs with a similarity between the specified minimum and maximum thresholds."""
+def load_duplicate_pairs(min_threshold: float, max_threshold: float) -> List[Tuple[str, str, float]]:
+    """
+    Load duplicate pairs with a similarity between the specified minimum and maximum thresholds.
+    
+    Args:
+        min_threshold: Minimum similarity threshold
+        max_threshold: Maximum similarity threshold
+        
+    Returns:
+        List of tuples containing (vector_id1, vector_id2, similarity)
+    """
+    conn = None
     try:
+        # Validate thresholds
+        if not (0 <= min_threshold <= max_threshold <= 100):
+            logger.error(f"Invalid thresholds: min={min_threshold}, max={max_threshold}")
+            return []
+            
         conn = sqlite3.connect("duplicates.db")
         cursor = conn.cursor()
         # Adjust the SQL query to filter duplicates within the specified range
@@ -127,18 +198,28 @@ def load_duplicate_pairs(min_threshold, max_threshold):
             (min_threshold, max_threshold),
         )
         duplicates = cursor.fetchall()
+        
         if not duplicates:
-            print(f"No duplicates found within thresholds {min_threshold} and {max_threshold}")
+            logger.info(f"No duplicates found within thresholds {min_threshold} and {max_threshold}")
+        else:
+            logger.info(f"Found {len(duplicates)} duplicate pairs within thresholds")
+            
         return duplicates
-    except Exception as e:
-        print("Error loading duplicates:", e)
+    except sqlite3.Error as e:
+        logger.error(f"Error loading duplicates: {e}")
+        return []
     finally:
         if conn:
             conn.close()
 
 
-def is_db_populated():
-    """Check if the 'duplicates' table in the database has any entries."""
+def is_db_populated() -> bool:
+    """
+    Check if the 'duplicates' table in the database has any entries.
+    
+    Returns:
+        True if database has entries, False otherwise
+    """
     conn = None
     try:
         conn = sqlite3.connect("duplicates.db")
@@ -146,9 +227,11 @@ def is_db_populated():
         # Check if there are any rows in the table
         cursor.execute("SELECT EXISTS(SELECT 1 FROM duplicates LIMIT 1)")
         exists = cursor.fetchone()[0]
-        return exists == 1
-    except Exception as e:
-        print("Error checking database population:", e)
+        result = exists == 1
+        logger.debug(f"Database populated check: {result}")
+        return result
+    except sqlite3.Error as e:
+        logger.error(f"Error checking database population: {e}")
         return False
     finally:
         if conn:
