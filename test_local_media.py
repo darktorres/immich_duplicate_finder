@@ -3,10 +3,11 @@
 import os
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from local_media import SUPPORTED_IMAGE_EXTENSIONS, bytes_to_megabytes, get_media_files
+from local_media import SUPPORTED_IMAGE_EXTENSIONS, bytes_to_megabytes, get_media_files, load_image
 
 
 @pytest.fixture
@@ -354,6 +355,99 @@ def test_get_media_files_with_various_extensions():
                 file_path.unlink()
             except FileNotFoundError:
                 pass
+        try:
+            os.rmdir(temp_dir)
+        except OSError:
+            pass
+
+
+@pytest.mark.unit
+def test_get_media_files_inaccessible_files():
+    """Test get_media_files with inaccessible files."""
+    temp_dir = tempfile.mkdtemp()
+    try:
+        # Create a file
+        test_file = Path(temp_dir) / "test.jpg"
+        test_file.touch()
+        
+        # Mock os.access to return False for this specific file
+        original_access = os.access
+        def mock_access(path, mode):
+            if str(test_file) in path:
+                return False  # Not accessible
+            return original_access(path, mode)
+        
+        with patch('local_media.os.access', side_effect=mock_access):
+            media_files = get_media_files(temp_dir)
+            # Should not include the inaccessible file
+            assert len(media_files) == 0
+        
+    finally:
+        # Cleanup
+        try:
+            test_file.unlink()
+        except FileNotFoundError:
+            pass
+        try:
+            os.rmdir(temp_dir)
+        except OSError:
+            pass
+
+
+@pytest.mark.unit
+def test_load_image_successful_with_load():
+    """Test successful image loading that calls image.load()."""
+    # Create a simple test image file
+    temp_dir = tempfile.mkdtemp()
+    try:
+        # Create a minimal valid image file
+        from PIL import Image as PILImage
+        test_image = PILImage.new('RGB', (10, 10), color='red')
+        test_path = os.path.join(temp_dir, 'test.jpg')
+        test_image.save(test_path)
+        
+        # Load the image
+        result = load_image(test_path)
+        
+        # Should successfully load
+        assert result is not None
+        assert result.mode == 'RGB'
+        assert result.size == (10, 10)
+        
+    finally:
+        # Cleanup
+        try:
+            os.unlink(test_path)
+        except FileNotFoundError:
+            pass
+        try:
+            os.rmdir(temp_dir)
+        except OSError:
+            pass
+
+
+@pytest.mark.unit
+def test_load_image_unidentified_image_error():
+    """Test load_image with UnidentifiedImageError."""
+    from PIL import UnidentifiedImageError
+    
+    # Create a file that looks like an image but isn't
+    temp_dir = tempfile.mkdtemp()
+    try:
+        test_path = os.path.join(temp_dir, 'fake.jpg')
+        with open(test_path, 'wb') as f:
+            f.write(b'This is not a valid image file')
+        
+        # Should return None for invalid image
+        result = load_image(test_path)
+        assert result is None
+        
+    finally:
+        # Cleanup
+        try:
+            os.unlink(test_path)
+        except FileNotFoundError:
+            pass
         try:
             os.rmdir(temp_dir)
         except OSError:

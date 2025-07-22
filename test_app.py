@@ -235,3 +235,104 @@ class TestMain:
         mocks['st'].error.assert_called()
         error_calls = [call[0][0] for call in mocks['st'].error.call_args_list]
         assert any("Unexpected error in main application" in call for call in error_calls)
+
+
+@pytest.mark.unit
+def test_configure_sidebar_button_clicks():
+    """Test button click handlers in configure_sidebar."""
+    with patch('app.st') as mock_st, \
+         patch('app.validate_threshold_range', return_value=(True, None)), \
+         patch('app.validate_limit', return_value=(True, None)):
+        
+        # Mock session state
+        mock_st.session_state = {
+            "faiss_min_threshold": 0.0, 
+            "faiss_max_threshold": 100.0, 
+            "limit": 10
+        }
+        
+        # Mock sidebar components
+        mock_st.sidebar.expander.return_value.__enter__ = MagicMock()
+        mock_st.sidebar.expander.return_value.__exit__ = MagicMock()
+        mock_st.number_input.side_effect = [0.0, 100.0, 10]
+        
+        # Test different button clicks
+        button_calls = []
+        def mock_button(text, **kwargs):
+            button_calls.append((text, kwargs))
+            if "Create/Update FAISS index" in text:
+                return True
+            return False
+        
+        mock_st.button = mock_button
+        
+        configure_sidebar()
+        
+        # Should have set the FAISS flag
+        assert mock_st.session_state.get("calculate_faiss") is True
+
+
+@pytest.mark.unit  
+def test_configure_sidebar_duplicate_db_button():
+    """Test duplicate DB button click."""
+    with patch('app.st') as mock_st, \
+         patch('app.validate_threshold_range', return_value=(True, None)), \
+         patch('app.validate_limit', return_value=(True, None)):
+        
+        # Mock session state
+        mock_st.session_state = {
+            "faiss_min_threshold": 0.0, 
+            "faiss_max_threshold": 100.0, 
+            "limit": 10
+        }
+        
+        # Mock sidebar components
+        mock_st.sidebar.expander.return_value.__enter__ = MagicMock()
+        mock_st.sidebar.expander.return_value.__exit__ = MagicMock()
+        mock_st.number_input.side_effect = [0.0, 100.0, 10]
+        
+        # Mock button to return True for duplicate DB button
+        def mock_button(text, **kwargs):
+            if "Create/Update duplicate DB" in text:
+                return True
+            return False
+        
+        mock_st.button = mock_button
+        
+        configure_sidebar()
+        
+        # Should have set the duplicate DB flag
+        assert mock_st.session_state.get("generate_db_duplicate") is True
+
+
+@pytest.mark.unit
+def test_configure_sidebar_find_photos_button():
+    """Test find duplicate photos button click."""
+    with patch('app.st') as mock_st, \
+         patch('app.validate_threshold_range', return_value=(True, None)), \
+         patch('app.validate_limit', return_value=(True, None)):
+        
+        # Mock session state
+        mock_st.session_state = {
+            "faiss_min_threshold": 0.0, 
+            "faiss_max_threshold": 100.0, 
+            "limit": 10
+        }
+        
+        # Mock sidebar components
+        mock_st.sidebar.expander.return_value.__enter__ = MagicMock()
+        mock_st.sidebar.expander.return_value.__exit__ = MagicMock()
+        mock_st.number_input.side_effect = [0.0, 100.0, 10]
+        
+        # Mock button to return True for find photos button
+        def mock_button(text, **kwargs):
+            if "Find duplicate photos" in text:
+                return True
+            return False
+        
+        mock_st.button = mock_button
+        
+        configure_sidebar()
+        
+        # Should have set the show duplicate flag
+        assert mock_st.session_state.get("show_faiss_duplicate") is True

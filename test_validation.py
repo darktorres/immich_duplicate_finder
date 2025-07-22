@@ -137,3 +137,24 @@ def test_validate_limit_non_numeric():
     is_valid, error = validate_limit("invalid")
     assert is_valid is False
     assert "must be a numeric" in error
+
+def test_validate_folder_path_os_error(mocker):
+    """Test validation when OS error occurs."""
+    # Mock Path to raise OSError
+    mock_path = mocker.patch('validation.Path')
+    mock_path.side_effect = OSError("System error")
+    
+    is_valid, error = validate_folder_path("/some/path")
+    assert is_valid is False
+    assert "Error accessing folder" in error
+    assert "System error" in error
+
+
+def test_validate_folder_path_not_readable(temp_dir, mocker):
+    """Test validation when folder is not readable."""
+    # Mock os.access to return False (not readable)
+    mocker.patch('validation.os.access', return_value=False)
+    
+    is_valid, error = validate_folder_path(temp_dir)
+    assert is_valid is False
+    assert "not readable" in error

@@ -311,3 +311,118 @@ def test_device_setup():
     # This test mainly ensures the module can be imported without GPU issues
     # The actual device setup is mocked in the import
     assert True  # If we get here, import was successful
+
+
+@pytest.mark.unit
+class TestCalculateFaissIndex:
+    """Test cases for calculateFaissIndex function."""
+    
+    @patch('imageDuplicate.st')
+    def test_calculate_faiss_index_basic_setup(self, mock_st):
+        """Test basic setup of calculateFaissIndex."""
+        # Mock session state
+        mock_st.session_state = {}
+        
+        # Mock UI components
+        mock_progress = MagicMock()
+        mock_st.progress.return_value = mock_progress
+        mock_st.button.return_value = False
+        mock_st.empty.return_value = MagicMock()
+        
+        # Mock update_faiss_index to avoid actual processing
+        with patch('imageDuplicate.update_faiss_index', return_value="processed"):
+            from imageDuplicate import calculateFaissIndex
+            
+            # Call with empty list to avoid long processing
+            calculateFaissIndex([])
+        
+        # Should initialize session state
+        assert "message" in mock_st.session_state
+        assert "progress" in mock_st.session_state
+        assert "stop_index" in mock_st.session_state
+    
+    # Note: Stop button functionality is complex to test due to Streamlit's session state handling
+    # The actual functionality is tested through integration testing
+
+
+@pytest.mark.unit
+class TestGenerateDbDuplicate:
+    """Test cases for generate_db_duplicate function."""
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.init_or_load_faiss_index')
+    def test_generate_db_duplicate_no_index(self, mock_init_load, mock_st):
+        """Test generate_db_duplicate with no FAISS index."""
+        # Mock no index available
+        mock_init_load.return_value = (None, [])
+        
+        from imageDuplicate import generate_db_duplicate
+        
+        generate_db_duplicate()
+        
+        # Should show message about no index
+        mock_st.write.assert_called_with("FAISS index or metadata not available.")
+    
+    # Note: Stop button functionality is complex to test due to Streamlit's session state handling
+    # The actual functionality is tested through integration testing
+
+
+@pytest.mark.unit
+class TestShowDuplicatePhotosFaiss:
+    """Test cases for show_duplicate_photos_faiss function."""
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.is_db_populated')
+    def test_show_duplicate_photos_empty_db(self, mock_is_populated, mock_st):
+        """Test show_duplicate_photos_faiss with empty database."""
+        # Mock empty database
+        mock_is_populated.return_value = False
+        
+        from imageDuplicate import show_duplicate_photos_faiss
+        
+        show_duplicate_photos_faiss(10, 0.0, 100.0)
+        
+        # Should show message about empty database
+        mock_st.write.assert_called_with(
+            "The database does not contain any duplicate entries. Please generate/update the database."
+        )
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.is_db_populated')
+    @patch('imageDuplicate.load_duplicate_pairs')
+    def test_show_duplicate_photos_no_duplicates(self, mock_load_pairs, mock_is_populated, mock_st):
+        """Test show_duplicate_photos_faiss with no duplicates found."""
+        # Mock populated database but no duplicates in range
+        mock_is_populated.return_value = True
+        mock_load_pairs.return_value = []
+        
+        from imageDuplicate import show_duplicate_photos_faiss
+        
+        show_duplicate_photos_faiss(10, 0.0, 100.0)
+        
+        # Should show no duplicates message
+        mock_st.write.assert_called_with("No duplicates found.")
+
+
+@pytest.mark.unit
+def test_model_and_transform_initialization():
+    """Test that model and transform are properly initialized."""
+    # This test ensures the global model and transform objects are created
+    from imageDuplicate import model, transform, weights
+    
+    # Should have these objects defined
+    assert model is not None
+    assert transform is not None
+    assert weights is not None
+
+
+@pytest.mark.unit
+def test_device_and_gpu_setup():
+    """Test device and GPU setup logic."""
+    from imageDuplicate import device, res
+    
+    # Should have device defined
+    assert device is not None
+    
+    # res can be None (CPU) or a GPU resource object
+    # This test just ensures no exceptions during import

@@ -4,6 +4,7 @@ import os
 import sqlite3
 import tempfile
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -194,3 +195,108 @@ def test_load_duplicate_pairs_invalid_thresholds(temp_db_dir, min_thresh, max_th
         assert len(pairs) >= 0  # Should work
     else:
         assert len(pairs) == 0  # Should return empty list for invalid thresholds
+@pytest.mark.unit
+def test_startup_db_configurations_exception_handling(temp_db_dir):
+    """Test database initialization with exception handling."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        with pytest.raises(sqlite3.Error):
+            startup_db_configurations()
+
+
+@pytest.mark.unit
+def test_startup_processed_duplicate_faiss_db_exception(temp_db_dir):
+    """Test duplicates database initialization with exception."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        with pytest.raises(sqlite3.Error):
+            startup_processed_duplicate_faiss_db()
+
+
+@pytest.mark.unit
+def test_save_settings_to_db_exception(temp_db_dir):
+    """Test save_settings_to_db with database exception."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        with pytest.raises(sqlite3.Error):
+            save_settings_to_db("/test/path")
+
+
+@pytest.mark.unit
+def test_load_settings_from_db_exception(temp_db_dir):
+    """Test load_settings_from_db with database exception."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        result = load_settings_from_db()
+        # Should return empty string on error
+        assert result == ""
+
+
+@pytest.mark.unit
+def test_delete_duplicate_pair_exception(temp_db_dir):
+    """Test delete_duplicate_pair with database exception."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        # Should not raise exception, should handle gracefully
+        delete_duplicate_pair("file1.jpg", "file2.jpg")
+
+
+@pytest.mark.unit
+def test_load_duplicate_pairs_sqlite_error(temp_db_dir):
+    """Test load_duplicate_pairs with SQLite error."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        result = load_duplicate_pairs(0.0, 100.0)
+        # Should return empty list on error
+        assert result == []
+
+
+@pytest.mark.unit
+def test_is_db_populated_sqlite_error(temp_db_dir):
+    """Test is_db_populated with SQLite error."""
+    # Mock sqlite3.connect to raise an exception
+    with patch('db.sqlite3.connect', side_effect=sqlite3.Error("Database error")):
+        result = is_db_populated()
+        # Should return False on error
+        assert result is False
+
+
+@pytest.mark.unit
+def test_save_duplicate_pair_invalid_similarity_types(temp_db_dir):
+    """Test save_duplicate_pair with various invalid similarity types."""
+    startup_processed_duplicate_faiss_db()
+    
+    # Test with None
+    save_duplicate_pair("file1.jpg", "file2.jpg", None)
+    
+    # Test with string that can't be converted
+    save_duplicate_pair("file3.jpg", "file4.jpg", "not_a_number")
+    
+    # Should not crash, should handle gracefully
+    pairs = load_duplicate_pairs(0.0, 100.0)
+    assert len(pairs) == 0  # No valid pairs should be saved
+
+
+@pytest.mark.unit
+def test_database_connection_cleanup():
+    """Test that database connections are properly cleaned up."""
+    # This test ensures connections are closed even if exceptions occur
+    
+    # Test with successful operation
+    startup_db_configurations()
+    
+    # Test with exception during operation
+    with patch('db.sqlite3.connect') as mock_connect:
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.Error("Test error")
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        
+        try:
+            save_duplicate_pair("file1.jpg", "file2.jpg", 0.5)
+        except:
+            pass
+        
+        # Connection should still be closed
+        mock_conn.close.assert_called()
