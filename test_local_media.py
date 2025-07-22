@@ -452,3 +452,31 @@ def test_load_image_unidentified_image_error():
             os.rmdir(temp_dir)
         except OSError:
             pass
+
+
+@pytest.mark.unit
+def test_get_file_info_image_dimension_error():
+    """Test get_file_info when image dimension extraction fails."""
+    from local_media import get_file_info
+    
+    # Create a temporary file that exists but can't be opened as image
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.jpg', delete=False) as f:
+        f.write("This is not a valid image")
+        temp_path = f.name
+    
+    try:
+        # Mock Image.open to raise an exception
+        with patch('local_media.Image.open', side_effect=Exception("Cannot open image")):
+            result = get_file_info(temp_path)
+            
+            # Should get file info but with "Unknown" resolution
+            assert result[0] != "Unknown"  # Should have file size
+            assert result[1] == os.path.basename(temp_path)  # file_name
+            assert result[2] == "Unknown"  # resolution should be Unknown due to exception
+            assert result[3] != "Unknown"  # Should have creation date
+            assert result[4] == temp_path  # file_path
+    finally:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass

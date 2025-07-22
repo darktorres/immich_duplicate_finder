@@ -426,3 +426,206 @@ def test_device_and_gpu_setup():
     
     # res can be None (CPU) or a GPU resource object
     # This test just ensures no exceptions during import
+
+
+# Note: GPU setup tests are complex due to FAISS GPU dependencies
+# These are tested through integration testing
+
+
+@pytest.mark.unit
+class TestStreamlitFunctions:
+    """Test cases for Streamlit-based functions."""
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.time.time')
+    def test_calculate_faiss_index_with_files(self, mock_time, mock_st):
+        """Test calculateFaissIndex with actual file processing."""
+        # Mock session state
+        mock_st.session_state = {
+            "message": "",
+            "progress": 0,
+            "stop_index": False
+        }
+        
+        # Mock UI components
+        mock_progress = MagicMock()
+        mock_st.progress.return_value = mock_progress
+        mock_st.button.return_value = False
+        mock_st.empty.return_value = MagicMock()
+        
+        # Mock time for progress calculation - provide enough values
+        mock_time.side_effect = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        
+        # Mock update_faiss_index to return different statuses
+        with patch('imageDuplicate.update_faiss_index') as mock_update:
+            mock_update.side_effect = ["processed", "skipped", "error"]
+            
+            from imageDuplicate import calculateFaissIndex
+            
+            calculateFaissIndex(["file1.jpg", "file2.jpg", "file3.jpg"])
+            
+            # Should process all files
+            assert mock_update.call_count == 3
+            
+            # Should update progress
+            assert mock_progress.progress.call_count >= 3
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.init_or_load_faiss_index')
+    @patch('imageDuplicate.save_duplicate_pair')
+    def test_generate_db_duplicate_with_processing(self, mock_save, mock_init_load, mock_st):
+        """Test generate_db_duplicate with actual processing."""
+        # Mock index with some vectors
+        mock_index = MagicMock()
+        mock_index.ntotal = 3
+        mock_index.reconstruct.side_effect = [
+            [0.1, 0.2, 0.3],  # Vector 0
+            [0.4, 0.5, 0.6],  # Vector 1
+            [0.7, 0.8, 0.9]   # Vector 2
+        ]
+        mock_index.search.return_value = (
+            np.array([[0.0, 0.5]]),  # distances
+            np.array([[0, 1]])       # indices
+        )
+        
+        mock_init_load.return_value = (mock_index, ['file1.jpg', 'file2.jpg', 'file3.jpg'])
+        
+        # Mock session state
+        mock_st.session_state = {"stop_requested": False}
+        mock_st.button.return_value = False
+        
+        # Mock UI components
+        mock_st.empty.return_value = MagicMock()
+        mock_st.progress.return_value = MagicMock()
+        
+        from imageDuplicate import generate_db_duplicate
+        
+        generate_db_duplicate()
+        
+        # Should save duplicate pairs
+        assert mock_save.call_count >= 1
+    
+    @patch('imageDuplicate.st')
+    @patch('imageDuplicate.is_db_populated')
+    @patch('imageDuplicate.load_duplicate_pairs')
+    @patch('imageDuplicate.load_image')
+    @patch('imageDuplicate.get_file_info')
+    @patch('imageDuplicate.image_comparison')
+    def test_show_duplicate_photos_with_results(self, mock_comparison, mock_get_info, 
+                                               mock_load_image, mock_load_pairs, 
+                                               mock_is_populated, mock_st):
+        """Test show_duplicate_photos_faiss with actual results."""
+        # Mock populated database with duplicates
+        mock_is_populated.return_value = True
+        mock_load_pairs.return_value = [
+            ('file1.jpg', 'file2.jpg', 0.95),
+            ('file3.jpg', 'file4.jpg', 0.85)
+        ]
+        
+        # Mock image loading
+        mock_image1 = MagicMock()
+        mock_image2 = MagicMock()
+        mock_load_image.side_effect = [mock_image1, mock_image2, mock_image1, mock_image2]
+        
+        # Mock file info
+        mock_get_info.side_effect = [
+            ("10.5 MB", "file1.jpg", "1920x1080", "2023-01-01", "file1.jpg"),
+            ("8.2 MB", "file2.jpg", "1280x720", "2023-01-02", "file2.jpg"),
+            ("12.1 MB", "file3.jpg", "1920x1080", "2023-01-03", "file3.jpg"),
+            ("9.8 MB", "file4.jpg", "1280x720", "2023-01-04", "file4.jpg")
+        ]
+        
+        # Mock session state
+        mock_st.session_state = {"stop_requested": False}
+        
+        # Mock UI components
+        mock_st.progress.return_value = MagicMock()
+        mock_st.subheader = MagicMock()
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+        mock_st.markdown = MagicMock()
+        
+        from imageDuplicate import show_duplicate_photos_faiss
+        
+        show_duplicate_photos_faiss(2, 0.8, 1.0)
+        
+        # Should load and display images
+        assert mock_load_image.call_count == 4
+        assert mock_get_info.call_count == 4
+        assert mock_comparison.call_count == 2
+
+
+@pytest.mark.unit
+class TestFaissOperations:
+    """Test cases for FAISS operations."""
+    
+    @patch('imageDuplicate.faiss')
+    @patch('imageDuplicate.np')
+    def test_save_faiss_index_gpu_to_cpu(self, mock_np, mock_faiss):
+        """Test saving FAISS index from GPU to CPU."""
+        from imageDuplicate import save_faiss_index_and_metadata
+        
+        # Mock GPU index
+        mock_index = MagicMock()
+        mock_index.getDevice.return_value = 0  # GPU device
+        
+        # Mock GPU to CPU conversion
+        mock_cpu_index = MagicMock()
+        mock_faiss.index_gpu_to_cpu.return_value = mock_cpu_index
+        
+        # Mock res (GPU resources)
+        with patch('imageDuplicate.res', MagicMock()):
+            save_faiss_index_and_metadata(mock_index, ['file1.jpg', 'file2.jpg'])
+        
+        # Should convert GPU index to CPU before saving
+        mock_faiss.index_gpu_to_cpu.assert_called_once_with(mock_index)
+        mock_faiss.write_index.assert_called_once_with(mock_cpu_index, 'faiss_index.bin')
+    
+    @patch('imageDuplicate.init_or_load_faiss_index')
+    @patch('imageDuplicate.load_image')
+    @patch('imageDuplicate.extract_features')
+    @patch('imageDuplicate.faiss')
+    @patch('imageDuplicate.np')
+    def test_update_faiss_index_with_gpu(self, mock_np, mock_faiss, mock_extract, 
+                                        mock_load_image, mock_init_load):
+        """Test updating FAISS index with GPU resources."""
+        from imageDuplicate import update_faiss_index
+        
+        # Mock no existing index
+        mock_init_load.return_value = (None, [])
+        
+        # Mock successful image loading and feature extraction
+        mock_image = MagicMock()
+        mock_load_image.return_value = mock_image
+        mock_features = np.array([1, 2, 3, 4])
+        mock_extract.return_value = mock_features
+        
+        # Mock FAISS index creation
+        mock_cpu_index = MagicMock()
+        mock_gpu_index = MagicMock()
+        mock_faiss.IndexFlatL2.return_value = mock_cpu_index
+        mock_faiss.index_cpu_to_gpu.return_value = mock_gpu_index
+        
+        # Mock GPU resources available
+        with patch('imageDuplicate.res', MagicMock()) as mock_res, \
+             patch('imageDuplicate.save_faiss_index_and_metadata') as mock_save:
+            
+            result = update_faiss_index('new_file.jpg')
+        
+        assert result == "processed"
+        
+        # Should create CPU index then convert to GPU
+        mock_faiss.IndexFlatL2.assert_called_once_with(4)
+        mock_faiss.index_cpu_to_gpu.assert_called_once_with(mock_res, 0, mock_cpu_index)
+        mock_gpu_index.add.assert_called_once()
+
+
+@pytest.mark.unit
+def test_transform_pipeline():
+    """Test the transform pipeline setup."""
+    from imageDuplicate import transform, convert_image_to_rgb
+    
+    # Test that transform is callable
+    assert callable(transform)
+    
+    # Test convert_image_to_rgb is in the pipeline
+    # This is tested indirectly through the transform composition
