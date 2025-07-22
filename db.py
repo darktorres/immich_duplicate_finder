@@ -1,5 +1,5 @@
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from logger_config import logger
 

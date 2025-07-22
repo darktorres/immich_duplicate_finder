@@ -60,7 +60,13 @@ def compare_and_color(value1: str, value2: str) -> str:
     return f"{value1}"
 
 
-def display_asset_column(col: st.columns, asset1_info: Tuple[str, str, str, str, str], asset2_info: Tuple[str, str, str, str, str], file_path_1: str, file_path_2: str) -> None:
+def display_asset_column(
+    col: st.columns,
+    asset1_info: Tuple[str, str, str, str, str],
+    asset2_info: Tuple[str, str, str, str, str],
+    file_path_1: str,
+    file_path_2: str,
+) -> None:
     """
     Displays the information for a single asset (file) in a column.
     

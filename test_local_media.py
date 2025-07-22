@@ -2,13 +2,11 @@
 
 import os
 import tempfile
-import pytest
 from pathlib import Path
-from unittest.mock import patch
 
-from PIL import Image
+import pytest
 
-from local_media import bytes_to_megabytes, get_media_files, SUPPORTED_IMAGE_EXTENSIONS
+from local_media import SUPPORTED_IMAGE_EXTENSIONS, bytes_to_megabytes, get_media_files
 
 
 @pytest.fixture

@@ -234,7 +234,9 @@ def calculateFaissIndex(media_files):
         estimated_time_remaining_min = int(estimated_time_remaining / 60)
 
         st.session_state["message"] = (
-            f"Processing file {i + 1}/{total_files} - (Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}). Estimated time remaining: {estimated_time_remaining_min} minutes."
+            f"Processing file {i + 1}/{total_files} - "
+            f"(Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}). "
+            f"Estimated time remaining: {estimated_time_remaining_min} minutes."
         )
         message_placeholder.text(st.session_state["message"])
 

@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 from PIL import Image, ImageFile, UnidentifiedImageError
@@ -34,7 +33,6 @@ def get_media_files(folder_path: str) -> List[str]:
 
     filepaths = []
     try:
-        folder_path_obj = Path(folder_path)
         logger.info(f"Scanning folder for media files: {folder_path}")
         
         for root, _, files in os.walk(folder_path):

@@ -3,18 +3,19 @@
 import os
 import sqlite3
 import tempfile
-import pytest
 from pathlib import Path
 
+import pytest
+
 from db import (
-    startup_db_configurations,
-    startup_processed_duplicate_faiss_db,
-    load_settings_from_db,
-    save_settings_to_db,
-    save_duplicate_pair,
-    load_duplicate_pairs,
     delete_duplicate_pair,
     is_db_populated,
+    load_duplicate_pairs,
+    load_settings_from_db,
+    save_duplicate_pair,
+    save_settings_to_db,
+    startup_db_configurations,
+    startup_processed_duplicate_faiss_db,
 )
 
 
