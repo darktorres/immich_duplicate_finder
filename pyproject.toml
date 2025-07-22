@@ -3,22 +3,26 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.12"
+# Core ML dependencies
 faiss-cpu = "1.11.0.post1"
-imagehash = "4.3.2"
-numpy = "2.3.1"
-pillow = "11.3.0"
-pillow-heif = "1.0.0"
-requests = "2.32.4"
-ruff = "^0.12.4"
 torch = { version = "2.7.1+cu126", source = "pytorch" }
 torchvision = { version = "0.22.1+cu126", source = "pytorch" }
-
-[tool.poetry.group.streamlit.dependencies]
+numpy = "2.3.1"
+# Image processing
+pillow = "11.3.0"
+pillow-heif = "1.0.0"
+imagehash = "4.3.2"
+# Web app
 streamlit = "1.47.0"
 streamlit-image-comparison = "0.0.4"
+# Utilities
+requests = "2.32.4"
 
 [tool.poetry.group.dev.dependencies]
+# Development tools
 poethepoet = "^0.36.0"
+ruff = "^0.12.4"
+# Testing
 pytest = "^8.3.4"
 pytest-cov = "^6.0.0"
 pytest-mock = "^3.14.0"

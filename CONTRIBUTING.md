@@ -6,7 +6,7 @@ Thank you for your interest in contributing to the Duplicate Finder project! Thi
 
 ### Prerequisites
 - Python 3.12 or higher
-- Poetry (recommended) or pip
+- Poetry
 - Git
 
 ### Setting up the Development Environment
@@ -18,16 +18,9 @@ Thank you for your interest in contributing to the Duplicate Finder project! Thi
    ```
 
 2. **Install dependencies**
-   
-   Using Poetry (recommended):
    ```bash
    poetry install
    poetry shell
-   ```
-   
-   Using pip:
-   ```bash
-   pip install -r requirements.txt
    ```
 
 3. **Install development tools**
@@ -48,9 +41,6 @@ poetry run streamlit run app.py
 
 # Using Make
 make run
-
-# Using pip
-streamlit run app.py
 ```
 
 ### Running Tests

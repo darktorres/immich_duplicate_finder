@@ -40,29 +40,25 @@ git clone https://github.com/vale46n1/immich_duplicate_finder.git
 
 ### Install Dependencies
 
-Navigate to the cloned repository's directory and install the required dependencies. You can use either Poetry (recommended) or pip:
+Navigate to the cloned repository's directory and install the required dependencies using Poetry:
 
-#### Using Poetry (Recommended)
 ```bash
 cd immich_duplicate_finder
 poetry install
 poetry shell  # Activate the virtual environment
 ```
 
-#### Using pip
-```bash
-cd immich_duplicate_finder
-pip install -r requirements.txt
-```
-
 This command installs all necessary Python packages that "Immich Duplicate Finder" relies on.
 
 #### GPU Support (Optional)
-For better performance, you can install GPU support:
+For better performance, you can install GPU support by updating the `pyproject.toml` dependencies:
 ```bash
-# For CUDA 12.6 (adjust version as needed)
-pip install faiss-gpu==1.11.0.post1
-pip install torch==2.7.1+cu126 torchvision==0.22.1+cu126 --extra-index-url https://download.pytorch.org/whl/cu126
+# Edit pyproject.toml to use GPU versions:
+# torch = { version = "2.7.1+cu126", source = "pytorch" }
+# torchvision = { version = "0.22.1+cu126", source = "pytorch" }
+# faiss-gpu = "1.11.0.post1"  # instead of faiss-cpu
+
+poetry install
 ```
 
 ### Launch the App

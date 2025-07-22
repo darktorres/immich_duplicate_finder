@@ -64,30 +64,3 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-  test-pip:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.12]
-
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-glx libglib2.0-0
-    
-    - name: Install dependencies with pip
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run tests with pip installation
-      run: |
-        pytest --cov=. --cov-report=term-missing -v

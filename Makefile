@@ -9,8 +9,7 @@ help: ## Show this help message
 install: ## Install dependencies using Poetry
 	poetry install
 
-install-pip: ## Install dependencies using pip
-	pip install -r requirements.txt
+
 
 test: ## Run tests
 	poetry run pytest -v
@@ -38,8 +37,7 @@ clean: ## Clean up generated files
 run: ## Run the Streamlit application
 	poetry run streamlit run app.py
 
-run-pip: ## Run the Streamlit application with pip installation
-	streamlit run app.py
+
 
 dev: ## Set up development environment
 	poetry install
