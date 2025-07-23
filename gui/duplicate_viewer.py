@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -26,12 +27,15 @@ class DuplicateViewer(QWidget):
     def __init__(self):
         super().__init__()
         self.duplicates = []
+        # Set size policy to expand
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setup_ui()
         
     def setup_ui(self):
         """Initialize the user interface."""
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(10)
+        self.layout.setContentsMargins(10, 10, 10, 10)
         
         # Header
         header = QLabel("Duplicate Image Pairs")
@@ -39,6 +43,15 @@ class DuplicateViewer(QWidget):
         header_font.setPointSize(14)
         header_font.setBold(True)
         header.setFont(header_font)
+        header.setStyleSheet("""
+            QLabel {
+                color: #2c3e50;
+                background-color: #ecf0f1;
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 10px;
+            }
+        """)
         self.layout.addWidget(header)
         
     def display_duplicates(self, duplicates):

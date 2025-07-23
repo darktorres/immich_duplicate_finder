@@ -319,6 +319,22 @@ class SidebarWidget(QWidget):
         
         if is_valid:
             self.folder_changed.emit(folder_path)
+            # Auto-save the folder path when it's valid
+            self.save_folder_path(folder_path)
+            
+    def save_folder_path(self, folder_path):
+        """Save just the folder path to both QSettings and database."""
+        if folder_path:
+            # Save to QSettings
+            self.settings.setValue("folder_path", folder_path)
+            
+            # Save to database for compatibility
+            try:
+                from db import save_settings_to_db
+                save_settings_to_db(folder_path)
+                logger.info(f"Saved folder path: {folder_path}")
+            except Exception as e:
+                logger.warning(f"Could not save folder path to database: {e}")
             
     def validate_inputs(self):
         """Validate all inputs and enable/disable find button."""
@@ -353,21 +369,48 @@ class SidebarWidget(QWidget):
         self.find_duplicates.emit(params)
         
     def load_settings(self):
-        """Load settings from QSettings."""
-        folder_path = self.settings.value("folder_path", "")
-        if folder_path:
-            self.folder_input.setText(folder_path)
+        """Load settings from QSettings and database."""
+        # First try to load from database (for compatibility with Streamlit version)
+        try:
+            from db import load_settings_from_db
+            db_folder_path = load_settings_from_db()
+            if db_folder_path:
+                self.folder_input.setText(db_folder_path)
+                # Also save to QSettings for future use
+                self.settings.setValue("folder_path", db_folder_path)
+            else:
+                # Fallback to QSettings
+                folder_path = self.settings.value("folder_path", "")
+                if folder_path:
+                    self.folder_input.setText(folder_path)
+        except Exception as e:
+            logger.warning(f"Could not load folder path from database: {e}")
+            # Fallback to QSettings
+            folder_path = self.settings.value("folder_path", "")
+            if folder_path:
+                self.folder_input.setText(folder_path)
             
         self.min_threshold.setValue(float(self.settings.value("min_threshold", 0.0)))
         self.max_threshold.setValue(float(self.settings.value("max_threshold", 100.0)))
         self.pairs_limit.setValue(int(self.settings.value("pairs_limit", 10)))
         
     def save_settings(self):
-        """Save settings to QSettings."""
-        self.settings.setValue("folder_path", self.folder_input.text())
+        """Save settings to QSettings and database."""
+        folder_path = self.folder_input.text()
+        
+        # Save to QSettings
+        self.settings.setValue("folder_path", folder_path)
         self.settings.setValue("min_threshold", self.min_threshold.value())
         self.settings.setValue("max_threshold", self.max_threshold.value())
         self.settings.setValue("pairs_limit", self.pairs_limit.value())
+        
+        # Also save folder path to database for compatibility with Streamlit version
+        if folder_path:
+            try:
+                from db import save_settings_to_db
+                save_settings_to_db(folder_path)
+            except Exception as e:
+                logger.warning(f"Could not save folder path to database: {e}")
         
     def closeEvent(self, event):
         """Handle widget close event."""

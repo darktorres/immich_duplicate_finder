@@ -42,8 +42,8 @@ class MainContentWidget(QWidget):
         # Log area
         self.setup_log_area(splitter)
         
-        # Set splitter proportions (main: 70%, log: 30%)
-        splitter.setSizes([500, 200])
+        # Set splitter proportions (main: 80%, log: 20%)
+        splitter.setSizes([600, 150])
         
     def setup_main_area(self):
         """Setup the main content display area."""
@@ -137,7 +137,7 @@ class MainContentWidget(QWidget):
         
         layout.addWidget(self.progress_widget)
         
-        # Results area (initially hidden)
+        # Results area (initially hidden) - make it expand to fill space
         self.results_area = QScrollArea()
         self.results_area.setVisible(False)
         self.results_area.setWidgetResizable(True)
@@ -148,13 +148,14 @@ class MainContentWidget(QWidget):
                 background-color: white;
             }
         """)
-        layout.addWidget(self.results_area)
+        # Add with stretch factor to make it expand
+        layout.addWidget(self.results_area, 1)
         
         # Duplicate viewer
         self.duplicate_viewer = DuplicateViewer()
         self.results_area.setWidget(self.duplicate_viewer)
         
-        layout.addStretch()
+        # Remove the addStretch() so results area can expand
         
     def setup_log_area(self, parent):
         """Setup the log display area."""
@@ -335,9 +336,13 @@ class MainContentWidget(QWidget):
         self.log_message(f"Found {len(duplicates)} duplicate pairs")
         self.status_message.emit(f"Found {len(duplicates)} duplicate pairs")
         
-        # Show results
+        # Show results and ensure proper sizing
         self.results_area.setVisible(True)
         self.duplicate_viewer.display_duplicates(duplicates)
+        
+        # Force layout update to ensure proper sizing
+        self.results_area.updateGeometry()
+        self.duplicate_viewer.updateGeometry()
         
     def on_worker_error(self, error_message):
         """Handle worker thread errors."""
