@@ -66,16 +66,32 @@ class DuplicateViewer(QWidget):
             no_results.setAlignment(Qt.AlignCenter)
             no_results.setStyleSheet("color: #666; font-size: 12pt; margin: 50px;")
             self.layout.addWidget(no_results)
-            # Only add stretch when there are no results
             self.layout.addStretch()
             return
             
-        # Add duplicate pairs
+        # Add info about result count
+        if len(duplicates) > 0:
+            info_label = QLabel(f"Displaying {len(duplicates)} duplicate pairs")
+            info_label.setAlignment(Qt.AlignCenter)
+            info_label.setStyleSheet("""
+                color: #2c3e50;
+                font-weight: bold;
+                background-color: #e8f4fd;
+                padding: 8px;
+                border-radius: 4px;
+                margin: 5px;
+            """)
+            self.layout.addWidget(info_label)
+            
+        # Add duplicate pairs with progress feedback
         for i, duplicate in enumerate(duplicates):
             pair_widget = self.create_duplicate_pair_widget(duplicate, i + 1)
             self.layout.addWidget(pair_widget)
             
-        # Don't add stretch when there are results - let the scroll area handle it
+            # Process events every 5 widgets to keep UI responsive
+            if i % 5 == 0:
+                from PySide6.QtWidgets import QApplication
+                QApplication.processEvents()
         
     def clear_content(self):
         """Clear all content except header."""
@@ -308,11 +324,11 @@ class DuplicateViewer(QWidget):
         image_layout = QVBoxLayout(image_container)
         image_layout.setContentsMargins(5, 5, 5, 5)
         
-        # Image
+        # Image - smaller size for better performance
         image_label = QLabel()
         image_label.setAlignment(Qt.AlignCenter)
-        image_label.setMinimumSize(280, 280)
-        image_label.setMaximumSize(350, 350)
+        image_label.setMinimumSize(250, 250)
+        image_label.setMaximumSize(300, 300)
         image_label.setScaledContents(False)
         
         # Load and display image
