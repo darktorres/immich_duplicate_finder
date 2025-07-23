@@ -2,7 +2,7 @@
 package-mode = false
 
 [tool.poetry.dependencies]
-python = ">=3.12"
+python = ">=3.12,<3.14"
 # Core ML dependencies
 faiss-cpu = "1.11.0.post1"
 torch = { version = "2.7.1+cu126", source = "pytorch" }
@@ -15,6 +15,8 @@ imagehash = "4.3.2"
 # Web app
 streamlit = "1.47.0"
 streamlit-image-comparison = "0.0.4"
+# Desktop GUI
+pyside6 = "6.8.1"
 # Utilities
 requests = "2.32.4"
 
@@ -39,6 +41,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 streamlit = "streamlit run app.py"
+gui = "python gui_minimal.py"
 
 [tool.poe.tasks.lint]
 cmd = "ruff check --fix ."
