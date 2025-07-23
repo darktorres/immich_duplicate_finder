@@ -13,8 +13,8 @@ Thank you for your interest in contributing to the Duplicate Finder project! Thi
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/immich_duplicate_finder_streamlit.git
-   cd immich_duplicate_finder_streamlit
+   git clone https://github.com/your-username/local_duplicate_finder.git
+   cd local_duplicate_finder
    ```
 
 2. **Install dependencies**

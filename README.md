@@ -1,15 +1,13 @@
-# Immich Duplicate Finder
+# Local Duplicate Finder
 
-## A Comprehensive Solution for Identifying and Managing Duplicate Photos in Immich
+## A Comprehensive Solution for Identifying and Managing Duplicate Photos
 
-![image](https://github.com/vale46n1/immich_duplicate_finder/assets/36825789/933b168d-b7ff-4cd0-8117-92852b6dc1cc)
-
-The "Immich Duplicate Finder" is an tool designed to seamlessly be integrated with the Immich API, targeting the efficient detection and management of duplicate images through hashing detection (and future incorporation of machine learning technologies). This project aims to enhance storage optimization and organization within the Immich ecosystem.
+The "Local Duplicate Finder" is a powerful tool designed for efficient detection and management of duplicate images through advanced hashing detection and machine learning technologies. This project aims to enhance storage optimization and organization for your local photo collections.
 
 ### Features:
 
 - **Highly Accurate Detection:** Utilizes state-of-the-art algorithms to identify duplicates with precision based on hashing values and FAISS Vector Database using ResNet152.
-- **Easy Integration:** Designed to be effortlessly integrated with existing Immich installations, ensuring a smooth user experience without disrupting the workflow.
+- **Local Processing:** Designed to work entirely with your local photo collections, ensuring privacy and control over your data.
 - **Performance Optimized:** Engineered for minimal resource consumption, ensuring fast and efficient duplicate detection even in large datasets.
 - **User-Friendly Interface:** Comes with a simple and intuitive interface, making it accessible to both technical and non-technical users, further enriched by the comparison slider for an enhanced visual interaction.
 
@@ -28,14 +26,14 @@ The "Immich Duplicate Finder" is an tool designed to seamlessly be integrated wi
 
 ## Getting Started
 
-"Immich Duplicate Finder" is built as a Streamlit app in Python, making it easy to deploy and use with just a few steps. Follow these instructions to get up and running:
+"Local Duplicate Finder" is built as a Streamlit app in Python, making it easy to deploy and use with just a few steps. Follow these instructions to get up and running:
 
 ### Clone the Repository
 
 Begin by cloning this repository to your local machine. You can do this by running the following command in your terminal or command prompt:
 
 ```bash
-git clone https://github.com/vale46n1/immich_duplicate_finder.git
+git clone https://github.com/vale46n1/local_duplicate_finder.git
 ```
 
 ### Install Dependencies
@@ -43,12 +41,12 @@ git clone https://github.com/vale46n1/immich_duplicate_finder.git
 Navigate to the cloned repository's directory and install the required dependencies using Poetry:
 
 ```bash
-cd immich_duplicate_finder
+cd local_duplicate_finder
 poetry install
 poetry shell  # Activate the virtual environment
 ```
 
-This command installs all necessary Python packages that "Immich Duplicate Finder" relies on.
+This command installs all necessary Python packages that "Local Duplicate Finder" relies on.
 
 ### Launch the App
 With the dependencies installed, you can now launch the Streamlit app:
@@ -101,19 +99,15 @@ ruff format .
 
 ### Docker setup
 
-If preferred, you can run Immich Duplicate Finder using the files in the `docker/` subfolder of the repository. Download the `docker-compose.yml` and `Dockerfile`, and run `docker compose up -d`. Immich Duplicate Finder will be accessible at `localhost:8501`.
+If preferred, you can run Local Duplicate Finder using the files in the `docker/` subfolder of the repository. Download the `docker-compose.yml` and `Dockerfile`, and run `docker compose up -d`. Local Duplicate Finder will be accessible at `localhost:8501`.
 
 ## Initial Configuration
 
-After launching the app, you'll need to complete a simple initial configuration to connect "Immich Duplicate Finder" with your Immich server:
+After launching the app, you'll need to complete a simple initial configuration:
 
-1. **Specify Immich Server Address:** Upon first launching the app, in the sidebar, you'll be prompted to enter the address of your Immich server. This ensures that the "Immich Duplicate Finder" can communicate with your Immich installation.
+1. **Specify Local Folder Path:** Upon first launching the app, in the sidebar, you'll be prompted to enter the path to your local photo folder. This tells the "Local Duplicate Finder" where to look for images to analyze.
 
-2. **Generate an API Key:** Next, [generate an API key][immich-api-key] within your Immich app. This is a critical step for authenticating and securing communication between the "Immich Duplicate Finder" and the Immich server.
-
-4. **Enter the API Key into the Program:** Once you have your API key, enter it into the designated field in the "Immich Duplicate Finder" app. This links your specific Immich instance to the duplicate finder.
-
-5. **Data Persistence:** To streamline your experience, the server address and API key are securely saved in a database. This means you won't need to re-enter this information every time you use the app, making future interactions quicker and more seamless.
+2. **Data Persistence:** To streamline your experience, the folder path is securely saved in a local database. This means you won't need to re-enter this information every time you use the app, making future interactions quicker and more seamless.
 
 ## Disclaimer
 
@@ -122,6 +116,4 @@ This software is provided "as is", without any warranty of any kind, express or 
 This program is still under development and may contain bugs or defects that could lead to data loss or damage. Users are cautioned to use it at their own risk. The developers assume no responsibility for any damages, loss of information, or any other kind of loss resulting from the use of this program.
 
 
-Enjoy exploring and managing duplicates in your Immich ecosystem with ease! If you encounter any issues or have suggestions for improvement, feel free to open an issue or submit a pull request.
-
-[immich-api-key]: https://immich.app/docs/features/command-line-interface#obtain-the-api-key
+Enjoy exploring and managing duplicates in your local photo collection with ease! If you encounter any issues or have suggestions for improvement, feel free to open an issue or submit a pull request.
