@@ -3,7 +3,7 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -140,33 +140,36 @@ def test_supported_extensions_case_insensitive():
         except OSError:
             pass
 
+
 @pytest.mark.unit
 def test_setup_local_media():
     """Test setup_local_media function."""
     # This function should run without errors
     from local_media import setup_local_media
+
     setup_local_media()  # Should not raise any exceptions
 
 
 @pytest.mark.unit
 class TestLoadImage:
     """Test cases for load_image function."""
-    
+
     def test_load_image_nonexistent_file(self):
         """Test loading non-existent image file."""
         from local_media import load_image
+
         result = load_image("/nonexistent/file.jpg")
         assert result is None
-    
+
     def test_load_image_invalid_file(self):
         """Test loading invalid image file."""
         from local_media import load_image
-        
+
         # Create a temporary text file (not an image)
-        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
             f.write(b"This is not an image")
             temp_path = f.name
-        
+
         try:
             result = load_image(temp_path)
             assert result is None
@@ -175,11 +178,11 @@ class TestLoadImage:
                 os.unlink(temp_path)
             except FileNotFoundError:
                 pass
-    
+
     def test_load_image_directory_instead_of_file(self):
         """Test loading a directory instead of file."""
         from local_media import load_image
-        
+
         temp_dir = tempfile.mkdtemp()
         try:
             result = load_image(temp_dir)
@@ -194,31 +197,32 @@ class TestLoadImage:
 @pytest.mark.unit
 class TestGetFileInfo:
     """Test cases for get_file_info function."""
-    
+
     def test_get_file_info_nonexistent_file(self):
         """Test getting info for non-existent file."""
         from local_media import get_file_info
+
         result = get_file_info("/nonexistent/file.jpg")
-        
+
         # Should return default values
         assert result[0] == "Unknown"  # file_size
         assert result[1] == "file.jpg"  # file_name
         assert result[2] == "Unknown"  # resolution
         assert result[3] == "Unknown"  # creation_date
         assert result[4] == "/nonexistent/file.jpg"  # file_path
-    
+
     def test_get_file_info_text_file(self):
         """Test getting info for a text file (not an image)."""
         from local_media import get_file_info
-        
+
         # Create a temporary text file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("This is a test file")
             temp_path = f.name
-        
+
         try:
             result = get_file_info(temp_path)
-            
+
             # Should get file size and name, but unknown resolution
             assert result[0] != "Unknown"  # Should have file size
             assert result[1] == os.path.basename(temp_path)  # file_name
@@ -230,17 +234,17 @@ class TestGetFileInfo:
                 os.unlink(temp_path)
             except FileNotFoundError:
                 pass
-    
+
     def test_get_file_info_permission_error(self, mocker):
         """Test getting info when file access is denied."""
         from local_media import get_file_info
-        
+
         # Mock os.path.isfile to return True, but os.path.getsize to raise PermissionError
-        mocker.patch('local_media.os.path.isfile', return_value=True)
-        mocker.patch('local_media.os.path.getsize', side_effect=PermissionError("Access denied"))
-        
+        mocker.patch("local_media.os.path.isfile", return_value=True)
+        mocker.patch("local_media.os.path.getsize", side_effect=PermissionError("Access denied"))
+
         result = get_file_info("/some/file.jpg")
-        
+
         # Should return default values on error
         assert result[0] == "Unknown"  # file_size
         assert result[1] == "file.jpg"  # file_name
@@ -252,50 +256,51 @@ class TestGetFileInfo:
 @pytest.mark.unit
 class TestDeleteFile:
     """Test cases for delete_file function."""
-    
+
     def test_delete_file_nonexistent(self):
         """Test deleting non-existent file."""
         from local_media import delete_file
+
         result = delete_file("/nonexistent/file.jpg")
         assert result is False
-    
+
     def test_delete_file_success(self):
         """Test successful file deletion."""
         from local_media import delete_file
-        
+
         # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False) as f:
             temp_path = f.name
-        
+
         # File should exist
         assert os.path.exists(temp_path)
-        
+
         # Delete it
         result = delete_file(temp_path)
         assert result is True
-        
+
         # File should no longer exist
         assert not os.path.exists(temp_path)
-    
+
     def test_delete_file_permission_error(self, mocker):
         """Test file deletion with permission error."""
         from local_media import delete_file
-        
+
         # Mock os.path.isfile to return True, but os.remove to raise PermissionError
-        mocker.patch('local_media.os.path.isfile', return_value=True)
-        mocker.patch('local_media.os.remove', side_effect=PermissionError("Access denied"))
-        
+        mocker.patch("local_media.os.path.isfile", return_value=True)
+        mocker.patch("local_media.os.remove", side_effect=PermissionError("Access denied"))
+
         result = delete_file("/some/file.jpg")
         assert result is False
-    
+
     def test_delete_file_os_error(self, mocker):
         """Test file deletion with OS error."""
         from local_media import delete_file
-        
+
         # Mock os.path.isfile to return True, but os.remove to raise OSError
-        mocker.patch('local_media.os.path.isfile', return_value=True)
-        mocker.patch('local_media.os.remove', side_effect=OSError("File in use"))
-        
+        mocker.patch("local_media.os.path.isfile", return_value=True)
+        mocker.patch("local_media.os.remove", side_effect=OSError("File in use"))
+
         result = delete_file("/some/file.jpg")
         assert result is False
 
@@ -303,13 +308,13 @@ class TestDeleteFile:
 @pytest.mark.unit
 def test_supported_image_extensions():
     """Test that SUPPORTED_IMAGE_EXTENSIONS contains expected formats."""
-    
+
     # Check that common formats are included
     expected_formats = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp", ".heic", ".heif", ".dng"]
-    
+
     for fmt in expected_formats:
         assert fmt in SUPPORTED_IMAGE_EXTENSIONS
-    
+
     # Check that all extensions are lowercase
     for ext in SUPPORTED_IMAGE_EXTENSIONS:
         assert ext == ext.lower()
@@ -319,35 +324,35 @@ def test_supported_image_extensions():
 @pytest.mark.unit
 def test_get_media_files_with_various_extensions():
     """Test get_media_files with various supported extensions."""
-    
+
     temp_dir = tempfile.mkdtemp()
     try:
         created_files = []
-        
+
         # Create files with different supported extensions
         test_extensions = [".jpg", ".PNG", ".gif", ".HEIC", ".webp"]
         for i, ext in enumerate(test_extensions):
             test_file = Path(temp_dir) / f"test{i}{ext}"
             test_file.touch()
             created_files.append(test_file)
-        
+
         # Create some non-image files
         non_image_file = Path(temp_dir) / "test.txt"
         non_image_file.touch()
         created_files.append(non_image_file)
-        
+
         media_files = get_media_files(temp_dir)
-        
+
         # Should find image files but not text file
         # Note: empty files might be filtered out by access validation
         assert len(media_files) >= 0
         assert len(media_files) <= len(test_extensions)
-        
+
         # All returned files should have supported extensions
         for file_path in media_files:
             file_ext = Path(file_path).suffix.lower()
             assert file_ext in SUPPORTED_IMAGE_EXTENSIONS
-        
+
     finally:
         # Cleanup
         for file_path in created_files:
@@ -369,19 +374,20 @@ def test_get_media_files_inaccessible_files():
         # Create a file
         test_file = Path(temp_dir) / "test.jpg"
         test_file.touch()
-        
+
         # Mock os.access to return False for this specific file
         original_access = os.access
+
         def mock_access(path, mode):
             if str(test_file) in path:
                 return False  # Not accessible
             return original_access(path, mode)
-        
-        with patch('local_media.os.access', side_effect=mock_access):
+
+        with patch("local_media.os.access", side_effect=mock_access):
             media_files = get_media_files(temp_dir)
             # Should not include the inaccessible file
             assert len(media_files) == 0
-        
+
     finally:
         # Cleanup
         try:
@@ -402,18 +408,19 @@ def test_load_image_successful_with_load():
     try:
         # Create a minimal valid image file
         from PIL import Image as PILImage
-        test_image = PILImage.new('RGB', (10, 10), color='red')
-        test_path = os.path.join(temp_dir, 'test.jpg')
+
+        test_image = PILImage.new("RGB", (10, 10), color="red")
+        test_path = os.path.join(temp_dir, "test.jpg")
         test_image.save(test_path)
-        
+
         # Load the image
         result = load_image(test_path)
-        
+
         # Should successfully load
         assert result is not None
-        assert result.mode == 'RGB'
+        assert result.mode == "RGB"
         assert result.size == (10, 10)
-        
+
     finally:
         # Cleanup
         try:
@@ -429,19 +436,18 @@ def test_load_image_successful_with_load():
 @pytest.mark.unit
 def test_load_image_unidentified_image_error():
     """Test load_image with UnidentifiedImageError."""
-    from PIL import UnidentifiedImageError
-    
+
     # Create a file that looks like an image but isn't
     temp_dir = tempfile.mkdtemp()
     try:
-        test_path = os.path.join(temp_dir, 'fake.jpg')
-        with open(test_path, 'wb') as f:
-            f.write(b'This is not a valid image file')
-        
+        test_path = os.path.join(temp_dir, "fake.jpg")
+        with open(test_path, "wb") as f:
+            f.write(b"This is not a valid image file")
+
         # Should return None for invalid image
         result = load_image(test_path)
         assert result is None
-        
+
     finally:
         # Cleanup
         try:
@@ -458,17 +464,17 @@ def test_load_image_unidentified_image_error():
 def test_get_file_info_image_dimension_error():
     """Test get_file_info when image dimension extraction fails."""
     from local_media import get_file_info
-    
+
     # Create a temporary file that exists but can't be opened as image
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.jpg', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".jpg", delete=False) as f:
         f.write("This is not a valid image")
         temp_path = f.name
-    
+
     try:
         # Mock Image.open to raise an exception
-        with patch('local_media.Image.open', side_effect=Exception("Cannot open image")):
+        with patch("local_media.Image.open", side_effect=Exception("Cannot open image")):
             result = get_file_info(temp_path)
-            
+
             # Should get file info but with "Unknown" resolution
             assert result[0] != "Unknown"  # Should have file size
             assert result[1] == os.path.basename(temp_path)  # file_name
@@ -486,20 +492,20 @@ def test_get_file_info_image_dimension_error():
 def test_get_file_info_image_open_exception():
     """Test get_file_info when Image.open raises an exception."""
     from local_media import get_file_info
-    
+
     # Create a temporary file
-    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         f.write(b"fake image data")
         temp_path = f.name
-    
+
     try:
         # Mock Image.open to raise a specific exception
-        with patch('local_media.Image.open', side_effect=OSError("Cannot open image file")):
+        with patch("local_media.Image.open", side_effect=OSError("Cannot open image file")):
             result = get_file_info(temp_path)
-            
+
             # Should handle the exception and return "Unknown" resolution
             assert result[2] == "Unknown"  # resolution should be Unknown
-            
+
     finally:
         try:
             os.unlink(temp_path)
@@ -511,25 +517,25 @@ def test_get_file_info_image_open_exception():
 def test_get_file_info_image_size_exception():
     """Test get_file_info when getting image size raises an exception."""
     from local_media import get_file_info
-    
+
     # Create a temporary file
-    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         f.write(b"fake image data")
         temp_path = f.name
-    
+
     try:
         # Mock Image.open to return an object that raises exception on .size
         mock_img = MagicMock()
         mock_img.__enter__ = MagicMock(return_value=mock_img)
         mock_img.__exit__ = MagicMock(return_value=None)
         mock_img.size = property(lambda self: (_ for _ in ()).throw(RuntimeError("Size error")))
-        
-        with patch('local_media.Image.open', return_value=mock_img):
+
+        with patch("local_media.Image.open", return_value=mock_img):
             result = get_file_info(temp_path)
-            
+
             # Should handle the exception and return "Unknown" resolution
             assert result[2] == "Unknown"  # resolution should be Unknown
-            
+
     finally:
         try:
             os.unlink(temp_path)
@@ -541,23 +547,23 @@ def test_get_file_info_image_size_exception():
 def test_get_file_info_image_context_manager_exception():
     """Test get_file_info when Image context manager raises an exception."""
     from local_media import get_file_info
-    
+
     # Create a temporary file
-    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         f.write(b"fake image data")
         temp_path = f.name
-    
+
     try:
         # Mock Image.open to raise exception in context manager
         mock_context = MagicMock()
         mock_context.__enter__.side_effect = IOError("Context manager error")
-        
-        with patch('local_media.Image.open', return_value=mock_context):
+
+        with patch("local_media.Image.open", return_value=mock_context):
             result = get_file_info(temp_path)
-            
+
             # Should handle the exception and return "Unknown" resolution
             assert result[2] == "Unknown"  # resolution should be Unknown
-            
+
     finally:
         try:
             os.unlink(temp_path)

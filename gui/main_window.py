@@ -2,22 +2,18 @@
 Main window for the Local Duplicate Finder GUI application.
 """
 
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
     QHBoxLayout,
+    QMainWindow,
     QSplitter,
     QStatusBar,
-    QMenuBar,
-    QMenu,
+    QWidget,
 )
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction
 
-from gui.sidebar import SidebarWidget
 from gui.main_content import MainContentWidget
-from gui.progress_dialog import ProgressDialog
+from gui.sidebar import SidebarWidget
 from logger_config import logger
 
 
@@ -130,7 +126,7 @@ class MainWindow(QMainWindow):
             "About Local Duplicate Finder",
             """
             <h3>Local Duplicate Finder v0.3.0-enhanced</h3>
-            <p>A comprehensive solution for identifying and managing duplicate photos using advanced hashing detection and machine learning technologies.</p>
+            <p>A comprehensive solution for identifying and managing duplicate photos using advanced hashing detection and ML technologies.</p>
             <p><b>Features:</b></p>
             <ul>
             <li>FAISS Vector Database with ResNet152</li>

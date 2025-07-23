@@ -3,21 +3,20 @@
 Main GUI application for Local Duplicate Finder using PySide6.
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QDir
 from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
 
 # Import existing modules
 from db import startup_db_configurations, startup_processed_duplicate_faiss_db
-from local_media import setup_local_media
-from logger_config import logger
 
 # Import GUI components
 from gui.main_window import MainWindow
+from local_media import setup_local_media
+from logger_config import logger
 
 # Set the environment variable to allow multiple OpenMP libraries
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"

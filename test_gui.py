@@ -4,17 +4,20 @@ Simple test for GUI components without full startup.
 """
 
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel
+
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow
+
 
 def main():
     app = QApplication(sys.argv)
-    
+
     window = QMainWindow()
     window.setWindowTitle("Test GUI")
     window.setCentralWidget(QLabel("Hello, PySide6!"))
     window.show()
-    
+
     return app.exec()
+
 
 if __name__ == "__main__":
     sys.exit(main())

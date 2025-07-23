@@ -15,8 +15,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gui.workers import FaissIndexWorker, DuplicateDbWorker, FindDuplicatesWorker
 from gui.duplicate_viewer import DuplicateViewer
+from gui.workers import DuplicateDbWorker, FaissIndexWorker, FindDuplicatesWorker
 from logger_config import logger
 
 
@@ -188,9 +188,7 @@ class MainContentWidget(QWidget):
         log_header_font = QFont()
         log_header_font.setBold(True)
         log_header.setFont(log_header_font)
-        log_header.setStyleSheet(
-            "margin: 0px; padding: 0px;"
-        )  # Remove all margins and padding
+        log_header.setStyleSheet("margin: 0px; padding: 0px;")  # Remove all margins and padding
         log_layout.addWidget(log_header)
 
         # Log text area
@@ -273,9 +271,7 @@ class MainContentWidget(QWidget):
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.finished.connect(
-            lambda: setattr(self, "worker_thread", None)
-        )
+        self.worker_thread.finished.connect(lambda: setattr(self, "worker_thread", None))
 
         self.worker_thread.start()
 
@@ -306,9 +302,7 @@ class MainContentWidget(QWidget):
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.finished.connect(
-            lambda: setattr(self, "worker_thread", None)
-        )
+        self.worker_thread.finished.connect(lambda: setattr(self, "worker_thread", None))
 
         self.worker_thread.start()
 
@@ -339,9 +333,7 @@ class MainContentWidget(QWidget):
         self.worker.finished.connect(self.worker_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.finished.connect(
-            lambda: setattr(self, "worker_thread", None)
-        )
+        self.worker_thread.finished.connect(lambda: setattr(self, "worker_thread", None))
 
         self.worker_thread.start()
 
@@ -369,7 +361,7 @@ class MainContentWidget(QWidget):
         """Handle duplicate search results."""
         self.hide_progress()
         self.log_message(f"Found {len(duplicates)} duplicate pairs")
-        
+
         # Limit results to prevent GUI freeze
         max_display = 50  # Only display first 50 pairs to prevent freeze
         if len(duplicates) > max_display:

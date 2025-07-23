@@ -2,39 +2,47 @@
 Sidebar widget for the Local Duplicate Finder GUI.
 """
 
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QLineEdit, QSpinBox, QDoubleSpinBox, QGroupBox, QFileDialog,
-    QFrame
-)
-from PySide6.QtCore import Signal, QSettings, Qt
+from PySide6.QtCore import QSettings, Qt, Signal
 from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
+    QDoubleSpinBox,
+    QFileDialog,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
-from validation import validate_folder_path, validate_threshold_range, validate_limit
 from logger_config import logger
+from validation import validate_folder_path, validate_limit, validate_threshold_range
 
 
 class SidebarWidget(QWidget):
     """Sidebar widget containing controls and settings."""
-    
+
     # Signals
     folder_changed = Signal(str)
     create_faiss_index = Signal(str)
     create_duplicate_db = Signal()
     find_duplicates = Signal(dict)
-    
+
     def __init__(self):
         super().__init__()
         self.settings = QSettings()
         self.setup_ui()
         self.load_settings()
-        
+
     def setup_ui(self):
         """Initialize the user interface."""
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         layout.setContentsMargins(10, 10, 10, 10)
-        
+
         # Title with better styling
         title = QLabel("🔍 Local Duplicate Finder")
         title_font = QFont()
@@ -50,40 +58,40 @@ class SidebarWidget(QWidget):
             margin-bottom: 5px;
         """)
         layout.addWidget(title)
-        
+
         # Folder selection group
         self.setup_folder_group(layout)
-        
+
         # Separator
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
         layout.addWidget(separator)
-        
+
         # FAISS operations group
         self.setup_faiss_group(layout)
-        
+
         # Separator
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.HLine)
         separator2.setFrameShadow(QFrame.Sunken)
         layout.addWidget(separator2)
-        
+
         # Search parameters group
         self.setup_search_group(layout)
-        
+
         # Separator
         separator3 = QFrame()
         separator3.setFrameShape(QFrame.HLine)
         separator3.setFrameShadow(QFrame.Sunken)
         layout.addWidget(separator3)
-        
+
         # Version info
         self.setup_version_info(layout)
-        
+
         # Add stretch to push everything to top
         layout.addStretch()
-        
+
     def setup_folder_group(self, parent_layout):
         """Setup folder selection group."""
         group = QGroupBox("📁 Folder Selection")
@@ -104,7 +112,7 @@ class SidebarWidget(QWidget):
         """)
         layout = QVBoxLayout(group)
         layout.setSpacing(10)
-        
+
         # Folder path input
         folder_layout = QHBoxLayout()
         self.folder_input = QLineEdit()
@@ -121,7 +129,7 @@ class SidebarWidget(QWidget):
                 border-color: #3498db;
             }
         """)
-        
+
         browse_btn = QPushButton("📂 Browse")
         browse_btn.clicked.connect(self.browse_folder)
         browse_btn.setStyleSheet("""
@@ -140,13 +148,13 @@ class SidebarWidget(QWidget):
                 background-color: #21618c;
             }
         """)
-        
+
         folder_layout.addWidget(self.folder_input)
         folder_layout.addWidget(browse_btn)
         layout.addLayout(folder_layout)
-        
+
         parent_layout.addWidget(group)
-        
+
     def setup_faiss_group(self, parent_layout):
         """Setup FAISS operations group."""
         group = QGroupBox("🔍 FAISS Operations")
@@ -167,7 +175,7 @@ class SidebarWidget(QWidget):
         """)
         layout = QVBoxLayout(group)
         layout.setSpacing(10)
-        
+
         # Create/Update FAISS index button
         self.faiss_index_btn = QPushButton("🚀 Create/Update FAISS Index")
         self.faiss_index_btn.clicked.connect(self.on_create_faiss_index)
@@ -193,7 +201,7 @@ class SidebarWidget(QWidget):
             }
         """)
         layout.addWidget(self.faiss_index_btn)
-        
+
         # Create/Update duplicate DB button
         self.duplicate_db_btn = QPushButton("💾 Create/Update Duplicate DB")
         self.duplicate_db_btn.clicked.connect(self.on_create_duplicate_db)
@@ -214,14 +222,14 @@ class SidebarWidget(QWidget):
             }
         """)
         layout.addWidget(self.duplicate_db_btn)
-        
+
         parent_layout.addWidget(group)
-        
+
     def setup_search_group(self, parent_layout):
         """Setup search parameters group."""
         group = QGroupBox("Search Parameters")
         layout = QVBoxLayout(group)
-        
+
         # Minimum threshold
         min_layout = QHBoxLayout()
         min_layout.addWidget(QLabel("Min Threshold:"))
@@ -233,7 +241,7 @@ class SidebarWidget(QWidget):
         self.min_threshold.valueChanged.connect(self.validate_inputs)
         min_layout.addWidget(self.min_threshold)
         layout.addLayout(min_layout)
-        
+
         # Maximum threshold
         max_layout = QHBoxLayout()
         max_layout.addWidget(QLabel("Max Threshold:"))
@@ -245,7 +253,7 @@ class SidebarWidget(QWidget):
         self.max_threshold.valueChanged.connect(self.validate_inputs)
         max_layout.addWidget(self.max_threshold)
         layout.addLayout(max_layout)
-        
+
         # Number of pairs
         pairs_layout = QHBoxLayout()
         pairs_layout.addWidget(QLabel("Pairs to Display:"))
@@ -255,7 +263,7 @@ class SidebarWidget(QWidget):
         self.pairs_limit.valueChanged.connect(self.validate_inputs)
         pairs_layout.addWidget(self.pairs_limit)
         layout.addLayout(pairs_layout)
-        
+
         # Find duplicates button
         self.find_duplicates_btn = QPushButton("🔎 Find Duplicate Photos")
         self.find_duplicates_btn.clicked.connect(self.on_find_duplicates)
@@ -282,97 +290,96 @@ class SidebarWidget(QWidget):
             }
         """)
         layout.addWidget(self.find_duplicates_btn)
-        
+
         parent_layout.addWidget(group)
-        
+
     def setup_version_info(self, parent_layout):
         """Setup version information."""
         group = QGroupBox("Information")
         layout = QVBoxLayout(group)
-        
+
         version_label = QLabel("Version: v0.3.0-enhanced")
         layout.addWidget(version_label)
-        
+
         # Log level info
         from logger_config import logger
+
         log_level_name = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}.get(logger.level, "UNKNOWN")
         log_label = QLabel(f"Log Level: {log_level_name}")
         layout.addWidget(log_label)
-        
+
         parent_layout.addWidget(group)
-        
+
     def browse_folder(self):
         """Open folder browser dialog."""
-        folder = QFileDialog.getExistingDirectory(
-            self,
-            "Select Image Folder",
-            self.folder_input.text() or ""
-        )
+        folder = QFileDialog.getExistingDirectory(self, "Select Image Folder", self.folder_input.text() or "")
         if folder:
             self.folder_input.setText(folder)
-            
+
     def on_folder_changed(self, folder_path):
         """Handle folder path change."""
         is_valid, _ = validate_folder_path(folder_path) if folder_path else (False, "")
         self.faiss_index_btn.setEnabled(is_valid)
         self.validate_inputs()
-        
+
         if is_valid:
             self.folder_changed.emit(folder_path)
             # Auto-save the folder path when it's valid
             self.save_folder_path(folder_path)
-            
+
     def save_folder_path(self, folder_path):
         """Save just the folder path to both QSettings and database."""
         if folder_path:
             # Save to QSettings
             self.settings.setValue("folder_path", folder_path)
-            
+
             # Save to database for compatibility
             try:
                 from db import save_settings_to_db
+
                 save_settings_to_db(folder_path)
                 logger.info(f"Saved folder path: {folder_path}")
             except Exception as e:
                 logger.warning(f"Could not save folder path to database: {e}")
-            
+
     def validate_inputs(self):
         """Validate all inputs and enable/disable find button."""
         folder_path = self.folder_input.text()
         min_thresh = self.min_threshold.value()
         max_thresh = self.max_threshold.value()
         limit = self.pairs_limit.value()
-        
+
         folder_valid, _ = validate_folder_path(folder_path) if folder_path else (False, "")
         threshold_valid, _ = validate_threshold_range(min_thresh, max_thresh)
         limit_valid, _ = validate_limit(limit)
-        
+
         self.find_duplicates_btn.setEnabled(folder_valid and threshold_valid and limit_valid)
-        
+
     def on_create_faiss_index(self):
         """Handle create FAISS index button click."""
         folder_path = self.folder_input.text()
         if folder_path:
             self.create_faiss_index.emit(folder_path)
-            
+
     def on_create_duplicate_db(self):
         """Handle create duplicate DB button click."""
         self.create_duplicate_db.emit()
-        
+
     def on_find_duplicates(self):
         """Handle find duplicates button click."""
         params = {
-            'limit': self.pairs_limit.value(),
-            'min_threshold': self.min_threshold.value(),
-            'max_threshold': self.max_threshold.value()
+            "limit": self.pairs_limit.value(),
+            "min_threshold": self.min_threshold.value(),
+            "max_threshold": self.max_threshold.value(),
         }
         self.find_duplicates.emit(params)
-        
+
     def load_settings(self):
         """Load settings from QSettings and database."""
         # First try to load from database (for compatibility with Streamlit version)
         try:
             from db import load_settings_from_db
+
             db_folder_path = load_settings_from_db()
             if db_folder_path:
                 self.folder_input.setText(db_folder_path)
@@ -389,29 +396,30 @@ class SidebarWidget(QWidget):
             folder_path = self.settings.value("folder_path", "")
             if folder_path:
                 self.folder_input.setText(folder_path)
-            
+
         self.min_threshold.setValue(float(self.settings.value("min_threshold", 0.0)))
         self.max_threshold.setValue(float(self.settings.value("max_threshold", 100.0)))
         self.pairs_limit.setValue(int(self.settings.value("pairs_limit", 10)))
-        
+
     def save_settings(self):
         """Save settings to QSettings and database."""
         folder_path = self.folder_input.text()
-        
+
         # Save to QSettings
         self.settings.setValue("folder_path", folder_path)
         self.settings.setValue("min_threshold", self.min_threshold.value())
         self.settings.setValue("max_threshold", self.max_threshold.value())
         self.settings.setValue("pairs_limit", self.pairs_limit.value())
-        
+
         # Also save folder path to database for compatibility with Streamlit version
         if folder_path:
             try:
                 from db import save_settings_to_db
+
                 save_settings_to_db(folder_path)
             except Exception as e:
                 logger.warning(f"Could not save folder path to database: {e}")
-        
+
     def closeEvent(self, event):
         """Handle widget close event."""
         self.save_settings()

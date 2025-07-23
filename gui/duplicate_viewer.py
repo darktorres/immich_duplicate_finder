@@ -23,20 +23,20 @@ from logger_config import logger
 
 class DuplicateViewer(QWidget):
     """Widget for displaying duplicate image pairs."""
-    
+
     def __init__(self):
         super().__init__()
         self.duplicates = []
         # Set size policy to expand
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setup_ui()
-        
+
     def setup_ui(self):
         """Initialize the user interface."""
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(10, 10, 10, 10)
-        
+
         # Header
         header = QLabel("Duplicate Image Pairs")
         header_font = QFont()
@@ -53,14 +53,14 @@ class DuplicateViewer(QWidget):
             }
         """)
         self.layout.addWidget(header)
-        
+
     def display_duplicates(self, duplicates):
         """Display the duplicate pairs."""
         self.duplicates = duplicates
-        
+
         # Clear existing content
         self.clear_content()
-        
+
         if not duplicates:
             no_results = QLabel("No duplicates found with current parameters.")
             no_results.setAlignment(Qt.AlignCenter)
@@ -68,7 +68,7 @@ class DuplicateViewer(QWidget):
             self.layout.addWidget(no_results)
             self.layout.addStretch()
             return
-            
+
         # Add info about result count
         if len(duplicates) > 0:
             info_label = QLabel(f"Displaying {len(duplicates)} duplicate pairs")
@@ -82,17 +82,18 @@ class DuplicateViewer(QWidget):
                 margin: 5px;
             """)
             self.layout.addWidget(info_label)
-            
+
         # Add duplicate pairs with progress feedback
         for i, duplicate in enumerate(duplicates):
             pair_widget = self.create_duplicate_pair_widget(duplicate, i + 1)
             self.layout.addWidget(pair_widget)
-            
+
             # Process events every 5 widgets to keep UI responsive
             if i % 5 == 0:
                 from PySide6.QtWidgets import QApplication
+
                 QApplication.processEvents()
-        
+
     def clear_content(self):
         """Clear all content except header."""
         # Remove all widgets except the first one (header)
@@ -100,7 +101,7 @@ class DuplicateViewer(QWidget):
             child = self.layout.takeAt(1)
             if child.widget():
                 child.widget().deleteLater()
-                
+
     def create_duplicate_pair_widget(self, duplicate, pair_number):
         """Create widget for a single duplicate pair."""
         frame = QFrame()
@@ -117,10 +118,10 @@ class DuplicateViewer(QWidget):
                 border-color: #4CAF50;
             }
         """)
-        
+
         layout = QVBoxLayout(frame)
         layout.setSpacing(15)
-        
+
         # Pair header with better styling
         header_layout = QHBoxLayout()
         pair_label = QLabel(f"Duplicate Pair #{pair_number}")
@@ -130,10 +131,10 @@ class DuplicateViewer(QWidget):
         pair_label.setFont(pair_font)
         pair_label.setStyleSheet("color: #2c3e50;")
         header_layout.addWidget(pair_label)
-        
+
         # Similarity score with better styling
-        if 'similarity' in duplicate:
-            similarity_score = duplicate['similarity']
+        if "similarity" in duplicate:
+            similarity_score = duplicate["similarity"]
             similarity_label = QLabel(f"Similarity: {similarity_score:.1f}%")
             similarity_label.setStyleSheet("""
                 color: #27ae60;
@@ -143,21 +144,18 @@ class DuplicateViewer(QWidget):
                 border-radius: 4px;
             """)
             header_layout.addWidget(similarity_label)
-            
+
         header_layout.addStretch()
         layout.addLayout(header_layout)
-        
+
         # Images layout with better spacing
         images_layout = QHBoxLayout()
         images_layout.setSpacing(20)
-        
+
         # Image 1
-        img1_widget = self.create_image_widget(
-            duplicate['image1_path'], 
-            "Image 1"
-        )
+        img1_widget = self.create_image_widget(duplicate["image1_path"], "Image 1")
         images_layout.addWidget(img1_widget)
-        
+
         # VS separator with styling
         vs_widget = QWidget()
         vs_layout = QVBoxLayout(vs_widget)
@@ -179,23 +177,20 @@ class DuplicateViewer(QWidget):
         vs_layout.addWidget(vs_label)
         vs_layout.addStretch()
         images_layout.addWidget(vs_widget)
-        
+
         # Image 2
-        img2_widget = self.create_image_widget(
-            duplicate['image2_path'], 
-            "Image 2"
-        )
+        img2_widget = self.create_image_widget(duplicate["image2_path"], "Image 2")
         images_layout.addWidget(img2_widget)
-        
+
         layout.addLayout(images_layout)
-        
+
         # Action buttons with better styling
         actions_layout = QHBoxLayout()
         actions_layout.setSpacing(10)
-        
+
         # Delete buttons
         delete1_btn = QPushButton("🗑️ Delete Image 1")
-        delete1_btn.clicked.connect(lambda: self.delete_image(duplicate['image1_path']))
+        delete1_btn.clicked.connect(lambda: self.delete_image(duplicate["image1_path"]))
         delete1_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
@@ -213,9 +208,9 @@ class DuplicateViewer(QWidget):
             }
         """)
         actions_layout.addWidget(delete1_btn)
-        
+
         delete2_btn = QPushButton("🗑️ Delete Image 2")
-        delete2_btn.clicked.connect(lambda: self.delete_image(duplicate['image2_path']))
+        delete2_btn.clicked.connect(lambda: self.delete_image(duplicate["image2_path"]))
         delete2_btn.setStyleSheet("""
             QPushButton {
                 background-color: #e74c3c;
@@ -233,13 +228,13 @@ class DuplicateViewer(QWidget):
             }
         """)
         actions_layout.addWidget(delete2_btn)
-        
+
         # Spacer
         actions_layout.addStretch()
-        
+
         # Folder buttons
         open_folder1_btn = QPushButton("📁 Open Folder 1")
-        open_folder1_btn.clicked.connect(lambda: self.open_folder(duplicate['image1_path']))
+        open_folder1_btn.clicked.connect(lambda: self.open_folder(duplicate["image1_path"]))
         open_folder1_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
@@ -257,9 +252,9 @@ class DuplicateViewer(QWidget):
             }
         """)
         actions_layout.addWidget(open_folder1_btn)
-        
+
         open_folder2_btn = QPushButton("📁 Open Folder 2")
-        open_folder2_btn.clicked.connect(lambda: self.open_folder(duplicate['image2_path']))
+        open_folder2_btn.clicked.connect(lambda: self.open_folder(duplicate["image2_path"]))
         open_folder2_btn.setStyleSheet("""
             QPushButton {
                 background-color: #3498db;
@@ -277,11 +272,11 @@ class DuplicateViewer(QWidget):
             }
         """)
         actions_layout.addWidget(open_folder2_btn)
-        
+
         layout.addLayout(actions_layout)
-        
+
         return frame
-        
+
     def create_image_widget(self, image_path, title):
         """Create widget for displaying a single image."""
         widget = QWidget()
@@ -295,7 +290,7 @@ class DuplicateViewer(QWidget):
         layout = QVBoxLayout(widget)
         layout.setSpacing(8)
         layout.setContentsMargins(10, 10, 10, 10)
-        
+
         # Title with better styling
         title_label = QLabel(title)
         title_label.setAlignment(Qt.AlignCenter)
@@ -311,7 +306,7 @@ class DuplicateViewer(QWidget):
             margin-bottom: 5px;
         """)
         layout.addWidget(title_label)
-        
+
         # Image container
         image_container = QWidget()
         image_container.setStyleSheet("""
@@ -323,24 +318,20 @@ class DuplicateViewer(QWidget):
         """)
         image_layout = QVBoxLayout(image_container)
         image_layout.setContentsMargins(5, 5, 5, 5)
-        
+
         # Image - smaller size for better performance
         image_label = QLabel()
         image_label.setAlignment(Qt.AlignCenter)
         image_label.setMinimumSize(250, 250)
         image_label.setMaximumSize(300, 300)
         image_label.setScaledContents(False)
-        
+
         # Load and display image
         if os.path.exists(image_path):
             pixmap = QPixmap(image_path)
             if not pixmap.isNull():
                 # Scale image to fit label while maintaining aspect ratio
-                scaled_pixmap = pixmap.scaled(
-                    image_label.maximumSize(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
-                )
+                scaled_pixmap = pixmap.scaled(image_label.maximumSize(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
                 image_label.setPixmap(scaled_pixmap)
             else:
                 image_label.setText("❌ Failed to load image")
@@ -348,10 +339,10 @@ class DuplicateViewer(QWidget):
         else:
             image_label.setText("❌ Image not found")
             image_label.setStyleSheet("color: #e74c3c; font-size: 12pt;")
-            
+
         image_layout.addWidget(image_label)
         layout.addWidget(image_container)
-        
+
         # File info section
         info_widget = QWidget()
         info_widget.setStyleSheet("""
@@ -364,27 +355,27 @@ class DuplicateViewer(QWidget):
         """)
         info_layout = QVBoxLayout(info_widget)
         info_layout.setSpacing(3)
-        
+
         # File path (shortened)
         filename = os.path.basename(image_path)
         folder = os.path.dirname(image_path)
         short_folder = "..." + folder[-30:] if len(folder) > 30 else folder
-        
+
         filename_label = QLabel(f"📄 {filename}")
         filename_label.setStyleSheet("color: #2c3e50; font-weight: bold; font-size: 9pt;")
         info_layout.addWidget(filename_label)
-        
+
         path_label = QLabel(f"📁 {short_folder}")
         path_label.setStyleSheet("color: #7f8c8d; font-size: 8pt;")
         path_label.setWordWrap(True)
         info_layout.addWidget(path_label)
-        
+
         # File size and dimensions
         try:
             if os.path.exists(image_path):
                 file_size = os.path.getsize(image_path)
                 size_mb = file_size / (1024 * 1024)
-                
+
                 # Get image dimensions
                 try:
                     with Image.open(image_path) as img:
@@ -392,17 +383,17 @@ class DuplicateViewer(QWidget):
                         dimensions_text = f"📐 {width}×{height} • 💾 {size_mb:.1f} MB"
                 except Exception:
                     dimensions_text = f"💾 {size_mb:.1f} MB"
-                
+
                 size_label = QLabel(dimensions_text)
                 size_label.setStyleSheet("color: #7f8c8d; font-size: 8pt;")
                 info_layout.addWidget(size_label)
         except Exception as e:
             logger.warning(f"Could not get file info for {image_path}: {e}")
-            
+
         layout.addWidget(info_widget)
-        
+
         return widget
-        
+
     def delete_image(self, image_path):
         """Delete an image file after confirmation."""
         reply = QMessageBox.question(
@@ -410,9 +401,9 @@ class DuplicateViewer(QWidget):
             "Confirm Deletion",
             f"Are you sure you want to delete this image?\n\n{image_path}",
             QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
+            QMessageBox.No,
         )
-        
+
         if reply == QMessageBox.Yes:
             try:
                 os.remove(image_path)
@@ -424,17 +415,17 @@ class DuplicateViewer(QWidget):
                 error_msg = f"Failed to delete image: {str(e)}"
                 QMessageBox.critical(self, "Error", error_msg)
                 logger.error(error_msg)
-                
+
     def open_folder(self, image_path):
         """Open the folder containing the image."""
         try:
             folder_path = os.path.dirname(image_path)
             if os.path.exists(folder_path):
                 # Windows
-                if os.name == 'nt':
+                if os.name == "nt":
                     os.startfile(folder_path)
                 # macOS
-                elif os.name == 'posix' and os.uname().sysname == 'Darwin':
+                elif os.name == "posix" and os.uname().sysname == "Darwin":
                     os.system(f'open "{folder_path}"')
                 # Linux
                 else:
