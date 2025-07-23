@@ -50,17 +50,6 @@ poetry shell  # Activate the virtual environment
 
 This command installs all necessary Python packages that "Immich Duplicate Finder" relies on.
 
-#### GPU Support (Optional)
-For better performance, you can install GPU support by updating the `pyproject.toml` dependencies:
-```bash
-# Edit pyproject.toml to use GPU versions:
-# torch = { version = "2.7.1+cu126", source = "pytorch" }
-# torchvision = { version = "0.22.1+cu126", source = "pytorch" }
-# faiss-gpu = "1.11.0.post1"  # instead of faiss-cpu
-
-poetry install
-```
-
 ### Launch the App
 With the dependencies installed, you can now launch the Streamlit app:
 

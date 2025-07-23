@@ -127,7 +127,6 @@ class TestFaissIndexOperations:
     @patch('imageDuplicate.faiss')
     @patch('imageDuplicate.np')
     @patch('imageDuplicate.os.path.exists')
-    @patch('imageDuplicate.res', None)  # Mock no GPU resources
     def test_init_or_load_faiss_index_existing(self, mock_exists, mock_np, mock_faiss):
         """Test loading existing FAISS index."""
         from imageDuplicate import init_or_load_faiss_index
@@ -142,7 +141,7 @@ class TestFaissIndexOperations:
         
         index, metadata = init_or_load_faiss_index()
         
-        # When no GPU resources, should return CPU index directly
+        # Should return CPU index directly
         assert index == mock_index
         assert metadata == ['file1.jpg', 'file2.jpg']
         
@@ -168,13 +167,11 @@ class TestFaissIndexOperations:
     
     @patch('imageDuplicate.faiss')
     @patch('imageDuplicate.np')
-    @patch('imageDuplicate.res', None)  # No GPU resources
     def test_save_faiss_index_and_metadata_cpu(self, mock_np, mock_faiss):
         """Test saving FAISS index on CPU."""
         from imageDuplicate import save_faiss_index_and_metadata
         
         mock_index = MagicMock()
-        mock_index.getDevice = None  # CPU index
         metadata = ['file1.jpg', 'file2.jpg']
         
         save_faiss_index_and_metadata(mock_index, metadata)
@@ -267,7 +264,6 @@ class TestUpdateFaissIndex:
     @patch('imageDuplicate.extract_features')
     @patch('imageDuplicate.faiss')
     @patch('imageDuplicate.np')
-    @patch('imageDuplicate.res', None)  # No GPU
     def test_update_faiss_index_create_new_index(self, mock_np, mock_faiss, mock_extract, 
                                                  mock_load_image, mock_init_load):
         """Test creating new FAISS index when none exists."""
@@ -417,15 +413,12 @@ def test_model_and_transform_initialization():
 
 
 @pytest.mark.unit
-def test_device_and_gpu_setup():
-    """Test device and GPU setup logic."""
-    from imageDuplicate import device, res
+def test_device_setup():
+    """Test device setup logic."""
+    from imageDuplicate import device
     
     # Should have device defined
     assert device is not None
-    
-    # res can be None (CPU) or a GPU resource object
-    # This test just ensures no exceptions during import
 
 
 # Note: GPU setup tests are complex due to FAISS GPU dependencies
@@ -558,65 +551,7 @@ class TestStreamlitFunctions:
 class TestFaissOperations:
     """Test cases for FAISS operations."""
     
-    @patch('imageDuplicate.faiss')
-    @patch('imageDuplicate.np')
-    def test_save_faiss_index_gpu_to_cpu(self, mock_np, mock_faiss):
-        """Test saving FAISS index from GPU to CPU."""
-        from imageDuplicate import save_faiss_index_and_metadata
-        
-        # Mock GPU index
-        mock_index = MagicMock()
-        mock_index.getDevice.return_value = 0  # GPU device
-        
-        # Mock GPU to CPU conversion
-        mock_cpu_index = MagicMock()
-        mock_faiss.index_gpu_to_cpu.return_value = mock_cpu_index
-        
-        # Mock res (GPU resources)
-        with patch('imageDuplicate.res', MagicMock()):
-            save_faiss_index_and_metadata(mock_index, ['file1.jpg', 'file2.jpg'])
-        
-        # Should convert GPU index to CPU before saving
-        mock_faiss.index_gpu_to_cpu.assert_called_once_with(mock_index)
-        mock_faiss.write_index.assert_called_once_with(mock_cpu_index, 'faiss_index.bin')
-    
-    @patch('imageDuplicate.init_or_load_faiss_index')
-    @patch('imageDuplicate.load_image')
-    @patch('imageDuplicate.extract_features')
-    @patch('imageDuplicate.faiss')
-    @patch('imageDuplicate.np')
-    def test_update_faiss_index_with_gpu(self, mock_np, mock_faiss, mock_extract, 
-                                        mock_load_image, mock_init_load):
-        """Test updating FAISS index with GPU resources."""
-        from imageDuplicate import update_faiss_index
-        
-        # Mock no existing index
-        mock_init_load.return_value = (None, [])
-        
-        # Mock successful image loading and feature extraction
-        mock_image = MagicMock()
-        mock_load_image.return_value = mock_image
-        mock_features = np.array([1, 2, 3, 4])
-        mock_extract.return_value = mock_features
-        
-        # Mock FAISS index creation
-        mock_cpu_index = MagicMock()
-        mock_gpu_index = MagicMock()
-        mock_faiss.IndexFlatL2.return_value = mock_cpu_index
-        mock_faiss.index_cpu_to_gpu.return_value = mock_gpu_index
-        
-        # Mock GPU resources available
-        with patch('imageDuplicate.res', MagicMock()) as mock_res, \
-             patch('imageDuplicate.save_faiss_index_and_metadata') as mock_save:
-            
-            result = update_faiss_index('new_file.jpg')
-        
-        assert result == "processed"
-        
-        # Should create CPU index then convert to GPU
-        mock_faiss.IndexFlatL2.assert_called_once_with(4)
-        mock_faiss.index_cpu_to_gpu.assert_called_once_with(mock_res, 0, mock_cpu_index)
-        mock_gpu_index.add.assert_called_once()
+
 
 
 @pytest.mark.unit

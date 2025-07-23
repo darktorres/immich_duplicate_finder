@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import faiss
 import numpy as np
@@ -26,18 +26,6 @@ if torch.cuda.is_available():
     logger.info(f"Using GPU: {gpu_name}")
 else:
     logger.info("Using CPU for PyTorch operations")
-
-# --- FAISS GPU SETUP ---
-res: Optional[faiss.StandardGpuResources] = None
-if device.type == "cuda":
-    try:
-        res = faiss.StandardGpuResources()
-        logger.info("FAISS GPU support enabled")
-    except AttributeError:
-        logger.warning("faiss-gpu not installed. Falling back to CPU for FAISS")
-        logger.info("Install it with: pip install faiss-gpu-cuXX (e.g., faiss-gpu-cu12 for CUDA 12.1)")
-        res = None
-# --- END SETUP ---
 
 # Load vit_b_16 with pretrained weights
 weights = ViT_B_16_Weights.DEFAULT
@@ -99,7 +87,7 @@ def extract_features(image: Image.Image) -> np.ndarray:
         raise
 
 
-def init_or_load_faiss_index() -> Tuple[Optional[faiss.Index], List[str]]:
+def init_or_load_faiss_index() -> Tuple[faiss.Index | None, List[str]]:
     """
     Initialize or load the FAISS index and metadata, ensuring index is ready for use.
 
@@ -109,12 +97,7 @@ def init_or_load_faiss_index() -> Tuple[Optional[faiss.Index], List[str]]:
     try:
         if os.path.exists(index_path) and os.path.exists(metadata_path):
             logger.info("Loading existing FAISS index and metadata")
-            cpu_index = faiss.read_index(index_path)
-            if res:
-                logger.info("Moving FAISS index to GPU")
-                index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
-            else:
-                index = cpu_index
+            index = faiss.read_index(index_path)
             metadata = np.load(metadata_path, allow_pickle=True).tolist()
             logger.info(f"Loaded FAISS index with {len(metadata)} entries")
         else:
@@ -136,13 +119,7 @@ def save_faiss_index_and_metadata(index: faiss.Index, metadata: List[str]) -> No
         metadata: List of file paths corresponding to index entries
     """
     try:
-        if res and hasattr(index, "getDevice"):  # Check if it is a GPU index
-            logger.debug("Moving FAISS index to CPU for saving")
-            cpu_index = faiss.index_gpu_to_cpu(index)
-        else:
-            cpu_index = index
-
-        faiss.write_index(cpu_index, index_path)
+        faiss.write_index(index, index_path)
         np.save(metadata_path, np.array(metadata, dtype=object))
         logger.debug(f"Saved FAISS index with {len(metadata)} entries")
     except Exception as e:
@@ -166,13 +143,8 @@ def update_faiss_index(file_path):
     if index is None:
         # Initialize the FAISS index with the correct dimension if it's the first time
         dimension = features.shape[0]
-        cpu_index = faiss.IndexFlatL2(dimension)
-        if res:
-            print("Creating new FAISS index on GPU.")
-            index = faiss.index_cpu_to_gpu(res, 0, cpu_index)
-        else:
-            print("Creating new FAISS index on CPU.")
-            index = cpu_index
+        index = faiss.IndexFlatL2(dimension)
+        logger.info("Creating new FAISS index on CPU.")
 
     index.add(np.array([features], dtype="float32"))
     existing_metadata.append(file_path)
