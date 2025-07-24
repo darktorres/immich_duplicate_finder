@@ -2,9 +2,12 @@ import os
 
 import streamlit as st
 
+# Apply memory configuration before any heavy imports
+from memory_config import MEMORY_CONFIG
+MEMORY_CONFIG.apply_environment_settings()
+
 from db import startup_db_configurations, startup_processed_duplicate_faiss_db
-from imageDuplicate import calculateFaissIndex, generate_db_duplicate, show_duplicate_photos_faiss
-from local_media import get_media_files, setup_local_media
+from local_media import setup_local_media
 from logger_config import logger
 from startup import startup_sidebar
 from validation import validate_folder_path, validate_limit, validate_threshold_range
@@ -106,13 +109,17 @@ def configure_sidebar() -> None:
 
         st.markdown("---")
         # Display program version and additional data
-        program_version = "v0.3.0-enhanced"
+        program_version = "v0.3.0-enhanced-optimized"
         st.markdown(f"**Version:** {program_version}")
 
         # Show current log level
         current_log_level = logger.level
         log_level_name = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR", 50: "CRITICAL"}.get(current_log_level, "UNKNOWN")
         st.markdown(f"**Log Level:** {log_level_name}")
+        
+        # Show memory optimization status
+        st.markdown(f"**Memory Config:** Batch size {MEMORY_CONFIG.batch_size}")
+        st.markdown(f"**Processing:** {'CPU Only' if MEMORY_CONFIG.use_cpu_only else 'GPU Enabled'}")
 
 
 def main() -> None:
@@ -136,33 +143,40 @@ def main() -> None:
 
         # Calculate the FAISS index if the corresponding flag is set
         if st.session_state["calculate_faiss"]:
-            logger.info("Starting FAISS index calculation")
+            logger.info("Starting memory-optimized FAISS index calculation")
+            # Lazy import heavy modules only when needed
+            from imageDuplicate import calculateFaissIndex
+            from local_media import get_media_files
+            
             media_files = get_media_files(folder_path)
             if media_files:
-                st.write(f"Found {len(media_files)} image files to process.")
+                st.write(f"Found {len(media_files)} image files to process with memory optimization.")
+                st.info(f"🚀 Processing in batches of {MEMORY_CONFIG.batch_size} for memory efficiency")
                 calculateFaissIndex(media_files)
             else:
                 st.warning("No image files found in the specified folder.")
                 logger.warning(f"No media files found in folder: {folder_path}")
-            # Reset the flag after processing
             st.session_state["calculate_faiss"] = False
 
         # Generate duplicate database if the corresponding flag is set
         if st.session_state["generate_db_duplicate"]:
-            logger.info("Starting duplicate database generation")
+            logger.info("Starting memory-optimized duplicate database generation")
+            # Lazy import heavy modules only when needed
+            from imageDuplicate import generate_db_duplicate
+            st.info("💾 Using batch processing for memory efficiency")
             generate_db_duplicate()
-            # Reset the flag after processing
             st.session_state["generate_db_duplicate"] = False
 
         # Show FAISS duplicate photos if the corresponding flag is set
         if st.session_state["show_faiss_duplicate"]:
-            logger.info("Starting duplicate photo display")
+            logger.info("Starting memory-optimized duplicate photo display")
+            # Lazy import heavy modules only when needed
+            from imageDuplicate import show_duplicate_photos_faiss
             show_duplicate_photos_faiss(
                 st.session_state["limit"],
                 st.session_state["faiss_min_threshold"],
                 st.session_state["faiss_max_threshold"],
             )
-            # Reset the flag after processing
             st.session_state["show_faiss_duplicate"] = False
 
     except Exception as e:

@@ -17,6 +17,9 @@ streamlit = "1.47.0"
 streamlit-image-comparison = "0.0.4"
 # Desktop GUI
 pyside6 = "6.8.1"
+# Memory profiling
+psutil = "^6.1.0"
+memory-profiler = "^0.61.0"
 # Utilities
 requests = "2.32.4"
 

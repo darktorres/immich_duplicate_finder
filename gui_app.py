@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Main GUI application for Local Duplicate Finder using PySide6.
+Memory-optimized GUI application for Local Duplicate Finder using PySide6.
 """
 
 import os
@@ -12,6 +12,10 @@ from PySide6.QtWidgets import QApplication
 
 # Set the environment variable to allow multiple OpenMP libraries
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# Apply memory configuration before any heavy imports
+from memory_config import MEMORY_CONFIG
+MEMORY_CONFIG.apply_environment_settings()
 
 # Import GUI components
 from gui.main_window import MainWindow
@@ -40,7 +44,7 @@ def main():
 
     # Set application properties
     app.setApplicationName("Local Duplicate Finder")
-    app.setApplicationVersion("v0.3.0-enhanced")
+    app.setApplicationVersion("v0.3.0-enhanced-optimized")
     app.setOrganizationName("Local Duplicate Finder")
 
     # Set application icon if available
