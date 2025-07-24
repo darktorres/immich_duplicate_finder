@@ -202,7 +202,7 @@ def calculate_faiss_index_gui(media_files: List[str], progress_callback: Optiona
                 
                 if progress_callback:
                     progress = int((file_index / len(media_files)) * 90)
-                    progress_callback(progress, f"Loading {os.path.basename(file_path)} ({file_index + 1}/{len(media_files)})")
+                    progress_callback(progress, f"Loading ({file_index + 1}/{len(media_files)})")
 
                 image = load_image(file_path)
                 if image:
