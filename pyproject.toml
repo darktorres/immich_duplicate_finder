@@ -41,7 +41,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poe.tasks]
 streamlit = "streamlit run app.py"
-gui = "python gui_minimal.py"
+gui = "python gui_app.py"
 
 [tool.poe.tasks.lint]
 cmd = "ruff check --fix ."

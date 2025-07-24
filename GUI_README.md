@@ -24,7 +24,7 @@ poetry run poe gui
 
 ### Manual Run
 ```bash
-poetry run python gui_minimal.py
+poetry run python gui_app.py
 ```
 
 ## How to Use

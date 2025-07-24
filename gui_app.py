@@ -10,27 +10,27 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
-# Import existing modules
-from db import startup_db_configurations, startup_processed_duplicate_faiss_db
+# Set the environment variable to allow multiple OpenMP libraries
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Import GUI components
 from gui.main_window import MainWindow
-from local_media import setup_local_media
-from logger_config import logger
-
-# Set the environment variable to allow multiple OpenMP libraries
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def setup_application():
     """Initialize the application and perform startup configurations."""
     try:
+        # Import only when needed to avoid potential import issues
+        from db import startup_db_configurations, startup_processed_duplicate_faiss_db
+        from local_media import setup_local_media
+        from logger_config import logger
+
         startup_db_configurations()
         startup_processed_duplicate_faiss_db()
         setup_local_media()
         logger.info("Application startup completed successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize application: {e}")
+        print(f"Failed to initialize application: {e}")
         raise
 
 
@@ -60,7 +60,7 @@ def main():
         return app.exec()
 
     except Exception as e:
-        logger.error(f"Application failed to start: {e}")
+        print(f"Application failed to start: {e}")
         return 1
 
 
