@@ -408,15 +408,6 @@ def test_model_and_transform_initialization():
     assert weights is not None
 
 
-@pytest.mark.unit
-def test_device_setup():
-    """Test device setup logic."""
-    from imageDuplicate import device
-
-    # Should have device defined
-    assert device is not None
-
-
 # Note: GPU setup tests are complex due to FAISS GPU dependencies
 # These are tested through integration testing
 

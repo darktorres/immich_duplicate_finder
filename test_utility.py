@@ -179,7 +179,7 @@ class TestDisplayAssetColumn:
         mock_st.button.return_value = True  # Trigger delete
 
         # Mock the delete function to fail
-        mock_delete_file = mocker.patch("utility.delete_file", return_value=False)
+        _mock_delete_file = mocker.patch("utility.delete_file", return_value=False)
 
         file_path_1 = "/path/to/file1.jpg"
         file_path_2 = "/path/to/file2.jpg"
@@ -199,7 +199,7 @@ class TestDisplayAssetColumn:
         mock_st.button.return_value = True  # Trigger delete
 
         # Mock the delete function to raise exception
-        mock_delete_file = mocker.patch("utility.delete_file", side_effect=Exception("Test error"))
+        _mock_delete_file = mocker.patch("utility.delete_file", side_effect=Exception("Test error"))
 
         file_path_1 = "/path/to/file1.jpg"
         file_path_2 = "/path/to/file2.jpg"

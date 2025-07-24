@@ -40,9 +40,9 @@ def test_startup_sidebar_with_existing_settings(temp_db_dir, mocker):
 
     mock_text_input = mocker.patch("startup.st.text_input")
     mock_button = mocker.patch("startup.st.button")
-    mock_success = mocker.patch("startup.st.sidebar.success")
-    mock_error = mocker.patch("startup.st.sidebar.error")
-    mock_rerun = mocker.patch("startup.st.rerun")
+    _mock_success = mocker.patch("startup.st.sidebar.success")
+    _mock_error = mocker.patch("startup.st.sidebar.error")
+    _mock_rerun = mocker.patch("startup.st.rerun")
 
     # Setup test data
     test_path = "/test/path"
@@ -78,11 +78,11 @@ def test_startup_sidebar_save_valid_path(temp_db_dir, mocker):
     mock_button.return_value = True  # Trigger save
 
     # Mock database and validation functions
-    mock_load = mocker.patch("startup.load_settings_from_db", return_value="")
+    _mock_load = mocker.patch("startup.load_settings_from_db", return_value="")
     mock_save = mocker.patch("startup.save_settings_to_db")
     mocker.patch("startup.validate_folder_path", return_value=(True, None))
 
-    result = startup_sidebar()
+    _result = startup_sidebar()
 
     mock_save.assert_called_once_with(test_path)
     mock_success.assert_called_once_with("Settings saved!")
@@ -107,11 +107,11 @@ def test_startup_sidebar_save_invalid_path(temp_db_dir, mocker):
     mock_button.return_value = True  # Trigger save
 
     # Mock database and validation functions
-    mock_load = mocker.patch("startup.load_settings_from_db", return_value="")
+    _mock_load = mocker.patch("startup.load_settings_from_db", return_value="")
     mock_save = mocker.patch("startup.save_settings_to_db")
     mocker.patch("startup.validate_folder_path", return_value=(False, "Path does not exist"))
 
-    result = startup_sidebar()
+    _result = startup_sidebar()
 
     mock_save.assert_not_called()
     mock_error.assert_called_once_with("Cannot save invalid path: Path does not exist")
@@ -128,7 +128,7 @@ def test_startup_sidebar_real_time_validation(temp_db_dir, mocker):
     mock_text_input = mocker.patch("startup.st.text_input")
     mock_button = mocker.patch("startup.st.button")
     mock_success = mocker.patch("startup.st.success")
-    mock_error = mocker.patch("startup.st.error")
+    _mock_error = mocker.patch("startup.st.error")
 
     # Setup test data - new path different from existing
     existing_path = "/old/path"
@@ -137,7 +137,7 @@ def test_startup_sidebar_real_time_validation(temp_db_dir, mocker):
     mock_button.return_value = False  # Don't trigger save
 
     # Mock database and validation functions
-    mock_load = mocker.patch("startup.load_settings_from_db", return_value=existing_path)
+    _mock_load = mocker.patch("startup.load_settings_from_db", return_value=existing_path)
     mocker.patch("startup.validate_folder_path", return_value=(True, None))
 
     result = startup_sidebar()
@@ -166,7 +166,7 @@ def test_startup_sidebar_real_time_validation_invalid(temp_db_dir, mocker):
     mock_button.return_value = False
 
     # Mock database and validation functions
-    mock_load = mocker.patch("startup.load_settings_from_db", return_value=existing_path)
+    _mock_load = mocker.patch("startup.load_settings_from_db", return_value=existing_path)
     mocker.patch("startup.validate_folder_path", return_value=(False, "Path does not exist"))
 
     result = startup_sidebar()

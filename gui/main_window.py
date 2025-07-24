@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
             "About Local Duplicate Finder",
             """
             <h3>Local Duplicate Finder v0.3.0-enhanced</h3>
-            <p>A comprehensive solution for identifying and managing duplicate photos using advanced hashing detection and ML technologies.</p>
+            <p>A comprehensive solution for identifying and managing duplicate photos using advanced hashing detection and ML.</p>
             <p><b>Features:</b></p>
             <ul>
             <li>FAISS Vector Database with ResNet152</li>
