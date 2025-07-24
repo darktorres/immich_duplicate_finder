@@ -63,7 +63,9 @@ def test_original_approach():
         print(f"✗ Error loading heavy components: {e}")
         print_memory_status("After failed heavy imports")
     
-    return get_memory_info()['rss_mb']
+    memory_mb = get_memory_info()['rss_mb']
+    print(f"Original approach memory usage: {memory_mb:.2f} MB")
+    assert memory_mb > 0  # Basic assertion for pytest
 
 
 def test_optimized_approach():
@@ -100,7 +102,9 @@ def test_optimized_approach():
         print(f"✗ Error loading heavy components: {e}")
         print_memory_status("After failed heavy loading")
     
-    return startup_memory, get_memory_info()['rss_mb']
+    final_memory = get_memory_info()['rss_mb']
+    print(f"Optimized approach - startup: {startup_memory:.2f} MB, final: {final_memory:.2f} MB")
+    assert startup_memory > 0 and final_memory > 0  # Basic assertion for pytest
 
 
 def main():

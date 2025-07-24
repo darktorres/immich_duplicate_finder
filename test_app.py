@@ -123,10 +123,10 @@ class TestMain:
             "configure_sidebar": mocker.patch("app.configure_sidebar"),
             "startup_sidebar": mocker.patch("app.startup_sidebar", return_value="/valid/path"),
             "validate_folder_path": mocker.patch("app.validate_folder_path", return_value=(True, None)),
-            "get_media_files": mocker.patch("app.get_media_files", return_value=["file1.jpg", "file2.jpg"]),
-            "calculateFaissIndex": mocker.patch("app.calculateFaissIndex"),
-            "generate_db_duplicate": mocker.patch("app.generate_db_duplicate"),
-            "show_duplicate_photos_faiss": mocker.patch("app.show_duplicate_photos_faiss"),
+            "get_media_files": mocker.patch("local_media.get_media_files", return_value=["file1.jpg", "file2.jpg"]),
+            "calculateFaissIndex": mocker.patch("imageDuplicate.calculateFaissIndex"),
+            "generate_db_duplicate": mocker.patch("imageDuplicate.generate_db_duplicate"),
+            "show_duplicate_photos_faiss": mocker.patch("imageDuplicate.show_duplicate_photos_faiss"),
             "st": mocker.patch("app.st"),
         }
 
@@ -168,7 +168,7 @@ class TestMain:
         # Should call FAISS calculation
         mocks["get_media_files"].assert_called_once_with("/valid/path")
         mocks["calculateFaissIndex"].assert_called_once()
-        mocks["st"].write.assert_called_with("Found 2 image files to process.")
+        mocks["st"].write.assert_called_with("Found 2 image files to process with memory optimization.")
 
         # Should reset flag
         assert mocks["st"].session_state["calculate_faiss"] is False
