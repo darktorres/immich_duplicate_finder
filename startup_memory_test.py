@@ -9,7 +9,7 @@ import time
 
 
 def test_original_startup():
-    """Test original app startup memory."""
+    """Test what original startup would have been (simulated with heavy loading)."""
     script = '''
 import psutil
 import os
@@ -30,8 +30,9 @@ startup_processed_duplicate_faiss_db()
 setup_local_media()
 print(f"After DB setup: {get_memory_mb():.2f} MB")
 
-# This triggers immediate heavy loading
-from imageDuplicate import model, device, transform
+# Simulate what original approach would have done - load everything immediately
+from imageDuplicate import get_model_and_transform
+components = get_model_and_transform()
 print(f"After heavy imports: {get_memory_mb():.2f} MB")
 print("STARTUP_COMPLETE")
 '''
@@ -63,13 +64,13 @@ startup_processed_duplicate_faiss_db()
 setup_local_media()
 print(f"After DB setup: {get_memory_mb():.2f} MB")
 
-# Only lightweight imports - no heavy loading yet
-from imageDuplicate_optimized import get_model_and_transform
+# Only lightweight imports - no heavy loading yet (this is the key optimization)
+from imageDuplicate import get_model_and_transform
 print(f"After optimized imports: {get_memory_mb():.2f} MB")
 print("STARTUP_COMPLETE")
 
-# Now test on-demand loading
-model, transform, device = get_model_and_transform()
+# Now test on-demand loading (when actually needed)
+components = get_model_and_transform()
 print(f"After on-demand loading: {get_memory_mb():.2f} MB")
 print("ON_DEMAND_COMPLETE")
 '''

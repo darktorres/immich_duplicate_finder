@@ -32,9 +32,9 @@ def print_memory_status(label):
 
 
 def test_original_approach():
-    """Test the original approach with immediate heavy imports."""
+    """Test what the original approach would have been (simulated)."""
     print("=" * 60)
-    print("TESTING ORIGINAL APPROACH (Heavy imports at startup)")
+    print("TESTING ORIGINAL APPROACH (Simulated heavy imports at startup)")
     print("=" * 60)
     
     print_memory_status("Initial memory")
@@ -52,10 +52,11 @@ def test_original_approach():
     setup_local_media()
     print_memory_status("After DB/media setup")
     
-    print("Loading heavy ML components (this is where memory spikes)...")
-    # This triggers immediate loading of PyTorch, model, etc.
+    print("Loading heavy ML components (simulating original behavior)...")
+    # Simulate what original would have done - load everything immediately
     try:
-        from imageDuplicate import model, device, transform
+        from imageDuplicate import get_model_and_transform
+        components = get_model_and_transform()
         print_memory_status("After heavy ML imports")
         print("✓ Heavy components loaded successfully")
     except Exception as e:
@@ -86,13 +87,13 @@ def test_optimized_approach():
     print_memory_status("After DB/media setup")
     
     print("Loading optimized module (no heavy imports yet)...")
-    from imageDuplicate_optimized import get_model_and_transform
+    from imageDuplicate import get_model_and_transform
     startup_memory = get_memory_info()['rss_mb']
     print_memory_status("After optimized imports (startup complete)")
     
     print("Now triggering heavy component loading (only when needed)...")
     try:
-        model, transform, device = get_model_and_transform()
+        components = get_model_and_transform()
         print_memory_status("After lazy-loaded heavy components")
         print("✓ Heavy components loaded on-demand successfully")
     except Exception as e:

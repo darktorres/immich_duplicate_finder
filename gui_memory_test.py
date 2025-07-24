@@ -8,14 +8,15 @@ import sys
 import time
 
 
-def test_gui_memory_usage(script_name, description):
+def test_gui_memory_usage(test_type, description):
     """Test memory usage of a GUI application."""
     print(f"\n{'='*60}")
     print(f"Testing {description}")
     print(f"{'='*60}")
     
     # Create a test script that launches the GUI and reports memory usage
-    test_script = f'''
+    if test_type == "heavy_loading":
+        test_script = '''
 import sys
 import os
 import psutil
@@ -25,37 +26,69 @@ from PySide6.QtWidgets import QApplication
 def get_memory_mb():
     return psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
 
-print(f"Initial memory: {{get_memory_mb():.2f}} MB")
+print(f"Initial memory: {get_memory_mb():.2f} MB")
 
 # Create QApplication
 app = QApplication(sys.argv)
-print(f"After QApplication: {{get_memory_mb():.2f}} MB")
+print(f"After QApplication: {get_memory_mb():.2f} MB")
 
-# Import and create the main window
-if "{script_name}" == "gui_app.py":
-    from gui.main_window import MainWindow
-    window = MainWindow()
-elif "{script_name}" == "gui_app_optimized.py":
-    # Apply memory config first
-    from memory_config import MEMORY_CONFIG
-    MEMORY_CONFIG.apply_environment_settings()
-    
-    from gui.main_window_optimized import MainWindowOptimized
-    window = MainWindowOptimized()
+# Import and create the main window with heavy loading
+from gui.main_window import MainWindow
+window = MainWindow()
+
+# Force heavy component loading (simulate original behavior)
+from gui.image_processing import get_model_and_transform
+components = get_model_and_transform()
 
 startup_memory = get_memory_mb()
-print(f"After window creation: {{startup_memory:.2f}} MB")
+print(f"After window creation: {startup_memory:.2f} MB")
 print("STARTUP_COMPLETE")
 
-# Keep the app running briefly to measure stable memory usage
 time.sleep(2)
 stable_memory = get_memory_mb()
-print(f"Stable memory: {{stable_memory:.2f}} MB")
+print(f"Stable memory: {stable_memory:.2f} MB")
+print("STABLE_COMPLETE")
+'''
+    else:  # optimized
+        test_script = '''
+import sys
+import os
+import psutil
+import time
+from PySide6.QtWidgets import QApplication
+
+def get_memory_mb():
+    return psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024
+
+print(f"Initial memory: {get_memory_mb():.2f} MB")
+
+# Apply memory config first
+from memory_config import MEMORY_CONFIG
+MEMORY_CONFIG.apply_environment_settings()
+
+# Create QApplication
+app = QApplication(sys.argv)
+print(f"After QApplication: {get_memory_mb():.2f} MB")
+
+# Import and create the main window (optimized - no heavy loading)
+from gui.main_window import MainWindow
+window = MainWindow()
+
+startup_memory = get_memory_mb()
+print(f"After window creation: {startup_memory:.2f} MB")
+print("STARTUP_COMPLETE")
+
+time.sleep(2)
+stable_memory = get_memory_mb()
+print(f"Stable memory: {stable_memory:.2f} MB")
 print("STABLE_COMPLETE")
 
-# Don't show the window to avoid user interaction
-# window.show()
-# app.exec()
+# Test on-demand loading
+from gui.image_processing import get_model_and_transform
+components = get_model_and_transform()
+final_memory = get_memory_mb()
+print(f"After on-demand loading: {final_memory:.2f} MB")
+print("ON_DEMAND_COMPLETE")
 '''
     
     try:
@@ -104,16 +137,16 @@ def main():
     print("GUI Memory Usage Comparison Test")
     print("This script compares memory usage between original and optimized GUI versions.")
     
-    # Test original GUI
-    print("\n1. Testing Original GUI...")
-    original_memory = test_gui_memory_usage("gui_app.py", "Original GUI Application")
+    # Test heavy loading (simulating original behavior)
+    print("\n1. Testing Heavy Loading (Original Behavior)...")
+    original_memory = test_gui_memory_usage("heavy_loading", "GUI with Heavy Loading")
     
     # Wait a bit between tests
     time.sleep(2)
     
     # Test optimized GUI
     print("\n2. Testing Optimized GUI...")
-    optimized_memory = test_gui_memory_usage("gui_app_optimized.py", "Memory-Optimized GUI Application")
+    optimized_memory = test_gui_memory_usage("optimized", "Memory-Optimized GUI Application")
     
     # Compare results
     print("\n" + "="*60)
