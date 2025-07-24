@@ -146,10 +146,10 @@ def init_or_load_faiss_index() -> Tuple[Optional[object], List[str]]:
         faiss = get_faiss()  # Lazy load FAISS
         
         if os.path.exists(index_path) and os.path.exists(metadata_path):
-            logger.info("Loading existing FAISS index and metadata")
+            # logger.info("Loading existing FAISS index and metadata")
             index = faiss.read_index(index_path)
             metadata = np.load(metadata_path, allow_pickle=True).tolist()
-            logger.info(f"Loaded FAISS index with {len(metadata)} entries")
+            # logger.info(f"Loaded FAISS index with {len(metadata)} entries")
         else:
             logger.info("No existing FAISS index found, will create new one")
             index = None
