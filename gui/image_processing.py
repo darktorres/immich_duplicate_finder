@@ -126,22 +126,11 @@ def clear_model_cache():
         logger.info("Model cache cleared")
 
 
-def extract_features(image_path: str) -> np.ndarray:
-    """Extract features from an image using ViT model with memory optimization."""
+def extract_features(images: List[Image.Image]) -> np.ndarray:
+    """Extract features from a batch of images using ViT model with memory optimization."""
+    if not images:
+        return np.array([])
     try:
-        # Load image first (lightweight operation)
-        image = load_image(image_path)
-        if image is None:
-            logger.error(f"Failed to load image: {image_path}")
-            return np.array([])
-
-        # Apply image size limit if configured
-        if MEMORY_CONFIG.max_image_size:
-            max_width, max_height = MEMORY_CONFIG.max_image_size
-            if image.size[0] > max_width or image.size[1] > max_height:
-                image = image.resize((max_width, max_height), Image.Resampling.LANCZOS)
-                logger.debug(f"Resized image {image_path} to {MEMORY_CONFIG.max_image_size}")
-
         # Now load heavy components (only when actually needed)
         components = get_model_and_transform()
         model = components['model']
@@ -150,20 +139,19 @@ def extract_features(image_path: str) -> np.ndarray:
         torch = components['torch']
 
         # Process image
-        input_tensor = transform(image).unsqueeze(0).to(device)
+        input_tensors = [transform(image) for image in images]
+        batch_tensor = torch.stack(input_tensors).to(device)
 
         # Extract features
         with torch.no_grad():
-            features = model(input_tensor)
+            features = model(batch_tensor)
 
         # Convert to numpy and normalize
-        features_np = features.cpu().numpy().flatten()
-        norm = np.linalg.norm(features_np)
-        if norm > 0:
-            features_np = features_np / norm
-        else:
-            logger.warning(f"Zero norm features for {image_path}")
-            return np.array([])
+        features_np = features.cpu().numpy()
+        norms = np.linalg.norm(features_np, axis=1, keepdims=True)
+        # Avoid division by zero
+        norms[norms == 0] = 1e-10
+        features_np = features_np / norms
 
         # Clear GPU cache if configured
         if MEMORY_CONFIG.clear_cache_after_batch and device.type == 'cuda':
@@ -172,12 +160,12 @@ def extract_features(image_path: str) -> np.ndarray:
         return features_np
 
     except Exception as e:
-        logger.error(f"Error extracting features from {image_path}: {e}")
+        logger.error(f"Error extracting features from image batch: {e}")
         return np.array([])
 
 
 def calculate_faiss_index_gui(media_files: List[str], progress_callback: Optional[Callable] = None) -> bool:
-    """Calculate FAISS index for GUI application with memory optimization."""
+    """Calculate FAISS index for GUI application with batch processing and memory optimization."""
     try:
         logger.info(f"Starting memory-optimized FAISS index calculation for {len(media_files)} files")
 
@@ -188,69 +176,62 @@ def calculate_faiss_index_gui(media_files: List[str], progress_callback: Optiona
         dimension = 1000  # ViT-B/16 feature dimension
         
         if MEMORY_CONFIG.faiss_index_type == "IndexIVFFlat":
-            # More memory-efficient index type
             quantizer = faiss.IndexFlatL2(dimension)
             index = faiss.IndexIVFFlat(quantizer, dimension, MEMORY_CONFIG.faiss_nlist)
             logger.info(f"Using memory-efficient IndexIVFFlat with {MEMORY_CONFIG.faiss_nlist} clusters")
         else:
-            # Default flat index
             index = faiss.IndexFlatL2(dimension)
             logger.info("Using IndexFlatL2")
 
-        # Store metadata
-        metadata = []
-        features_list = []
+        all_features_list = []
+        all_metadata = []
         processed_count = 0
-        batch_count = 0
-
-        # Process in batches for memory management
         batch_size = MEMORY_CONFIG.batch_size
         
         for i in range(0, len(media_files), batch_size):
             batch_end = min(i + batch_size, len(media_files))
-            batch_files = media_files[i:batch_end]
-            batch_count += 1
+            batch_paths = media_files[i:batch_end]
             
-            logger.info(f"Processing batch {batch_count} ({len(batch_files)} files)")
+            logger.info(f"Processing batch {i // batch_size + 1} ({len(batch_paths)} files)")
             
-            # Process batch
-            batch_features = []
-            batch_metadata = []
+            batch_images = []
+            valid_paths_in_batch = []
             
-            for j, file_path in enumerate(batch_files):
+            for j, file_path in enumerate(batch_paths):
                 file_index = i + j
                 
                 if progress_callback:
                     progress = int((file_index / len(media_files)) * 90)
-                    progress_callback(progress, f"Processing {os.path.basename(file_path)} ({file_index + 1}/{len(media_files)})")
+                    progress_callback(progress, f"Loading {os.path.basename(file_path)} ({file_index + 1}/{len(media_files)})")
 
-                # Extract features
-                features = extract_features(file_path)
-                if features.size > 0:
-                    if features.size != dimension:
-                        logger.warning(f"Feature dimension mismatch for {file_path}: expected {dimension}, got {features.size}")
-                        continue
-                    batch_features.append(features)
-                    batch_metadata.append(file_path)
-                    processed_count += 1
+                image = load_image(file_path)
+                if image:
+                    # Apply image size limit if configured
+                    if MEMORY_CONFIG.max_image_size:
+                        max_width, max_height = MEMORY_CONFIG.max_image_size
+                        if image.size[0] > max_width or image.size[1] > max_height:
+                            image = image.resize((max_width, max_height), Image.Resampling.LANCZOS)
+                    
+                    batch_images.append(image)
+                    valid_paths_in_batch.append(file_path)
                 else:
-                    logger.warning(f"Skipping file with no features: {file_path}")
+                    logger.warning(f"Skipping file that could not be loaded: {file_path}")
 
-            # Add batch to main lists
-            features_list.extend(batch_features)
-            metadata.extend(batch_metadata)
+            if not batch_images:
+                continue
+
+            # Extract features for the whole batch
+            features_batch = extract_features(batch_images)
+            if features_batch.size > 0:
+                all_features_list.append(features_batch)
+                all_metadata.extend(valid_paths_in_batch)
+                processed_count += len(features_batch)
             
             # Force garbage collection after each batch
             if MEMORY_CONFIG.aggressive_gc:
                 gc.collect()
-                
-            # Clear GPU cache if configured
-            if MEMORY_CONFIG.clear_cache_after_batch and is_model_loaded():
-                components = get_model_and_transform()
-                if components['device'].type == 'cuda':
-                    components['torch'].cuda.empty_cache()
 
-        if not features_list:
+        if not all_features_list:
             error_msg = "No valid features extracted from any files"
             logger.error(error_msg)
             if progress_callback:
@@ -258,36 +239,29 @@ def calculate_faiss_index_gui(media_files: List[str], progress_callback: Optiona
             return False
 
         if progress_callback:
-            progress_callback(95, f"Saving index with {len(features_list)} entries...")
+            progress_callback(95, f"Building final index with {len(all_metadata)} entries...")
 
-        # Convert to numpy array and add to index
-        features_array = np.array(features_list).astype("float32")
+        features_array = np.vstack(all_features_list).astype("float32")
         
-        # Train index if using IVF
         if MEMORY_CONFIG.faiss_index_type == "IndexIVFFlat":
             logger.info("Training IVF index...")
             index.train(features_array)
         
         index.add(features_array)
 
-        # Save index and metadata
         faiss.write_index(index, "faiss_index.bin")
-        np.save("metadata.npy", np.array(metadata))
+        np.save("metadata.npy", np.array(all_metadata))
 
         success_msg = f"FAISS index created successfully with {index.ntotal} entries from {processed_count} files"
         logger.info(success_msg)
         if progress_callback:
             progress_callback(100, success_msg)
             
-        # Final cleanup
-        if MEMORY_CONFIG.aggressive_gc:
-            gc.collect()
-            
         return True
 
     except Exception as e:
         error_msg = f"Error creating FAISS index: {e}"
-        logger.error(error_msg)
+        logger.error(error_msg, exc_info=True)
         if progress_callback:
             progress_callback(100, error_msg)
         return False
@@ -318,9 +292,6 @@ def generate_duplicate_db_gui(progress_callback: Optional[Callable] = None) -> b
         duplicate_count = 0
         total_vectors = index.ntotal
         
-        # Similarity threshold based on distance
-        similarity_threshold = 0.5  # Adjust as needed
-        
         for batch_start in range(0, total_vectors, batch_size):
             batch_end = min(batch_start + batch_size, total_vectors)
             
@@ -340,7 +311,7 @@ def generate_duplicate_db_gui(progress_callback: Optional[Callable] = None) -> b
                 actual_i = batch_start + i
                 
                 for j, (distance, idx) in enumerate(zip(dist_row, idx_row)):
-                    if actual_i < idx and distance < similarity_threshold:
+                    if actual_i < idx:
                         similarity_score = max(0, 100 - (distance * 100))
                         save_duplicate_pair(metadata[actual_i], metadata[idx], similarity_score)
                         duplicate_count += 1

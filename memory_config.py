@@ -66,7 +66,7 @@ class MemoryConfig:
         return cls(
             use_cpu_only=False,
             model_precision="float32",
-            batch_size=20,
+            batch_size=40,
             faiss_index_type="IndexFlatL2",
             max_image_size=None,  # No resizing
             lazy_loading=False,  # Load everything at startup for speed

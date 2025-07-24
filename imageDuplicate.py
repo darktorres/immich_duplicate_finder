@@ -106,37 +106,56 @@ index_path = "faiss_index.bin"
 metadata_path = "metadata.npy"
 
 
-def extract_features(image: Image.Image) -> np.ndarray:
-    """Extract features from an image using a pretrained model with memory optimization."""
+def extract_features(images: List[Image.Image]) -> np.ndarray:
+    """Extract features from a batch of images using a pretrained model with memory optimization."""
+    if not images:
+        return np.array([])
     try:
         # Apply image size limit if configured
+        processed_images = []
         if MEMORY_CONFIG.max_image_size:
             max_width, max_height = MEMORY_CONFIG.max_image_size
-            if image.size[0] > max_width or image.size[1] > max_height:
-                image = image.resize((max_width, max_height), Image.Resampling.LANCZOS)
-                logger.debug(f"Resized image to {MEMORY_CONFIG.max_image_size}")
+            for image in images:
+                if image.size[0] > max_width or image.size[1] > max_height:
+                    processed_images.append(image.resize((max_width, max_height), Image.Resampling.LANCZOS))
+                    logger.debug(f"Resized image to {MEMORY_CONFIG.max_image_size}")
+                else:
+                    processed_images.append(image)
+        else:
+            processed_images = images
 
         # Now load heavy components (only when actually needed)
         components = get_model_and_transform()
-        model = components['model']
-        transform = components['transform']
-        device = components['device']
-        torch = components['torch']
+        model, transform, device, torch = (
+            components["model"],
+            components["transform"],
+            components["device"],
+            components["torch"],
+        )
 
-        # Process image
-        image_tensor = transform(image).unsqueeze(0).to(device)
+        image_tensors = [transform(img) for img in processed_images]
+        batch_tensor = torch.stack(image_tensors).to(device)
+
         with torch.no_grad():
-            features = model(image_tensor)
-        result = features.cpu().numpy().flatten()
+            features = model(batch_tensor)
+
+        features_np = features.cpu().numpy()
+
+        # Normalize each feature vector in the batch
+        norms = np.linalg.norm(features_np, axis=1, keepdims=True)
+        # Avoid division by zero
+        norms[norms == 0] = 1e-10
+        features_np = features_np / norms
 
         # Clear GPU cache if configured
-        if MEMORY_CONFIG.clear_cache_after_batch and device.type == 'cuda':
+        if MEMORY_CONFIG.clear_cache_after_batch and device.type == "cuda":
             torch.cuda.empty_cache()
 
-        logger.debug(f"Extracted features with shape: {result.shape}")
-        return result
+        logger.debug(f"Extracted features for batch of {len(images)} images, shape: {features_np.shape}")
+        return features_np
+
     except Exception as e:
-        logger.error(f"Error extracting features from image: {e}")
+        logger.error(f"Error extracting features from image batch: {e}")
         raise
 
 
@@ -172,50 +191,8 @@ def save_faiss_index_and_metadata(index: object, metadata: List[str]) -> None:
         raise
 
 
-def update_faiss_index(file_path):
-    """Update the FAISS index and metadata with a new image and its path."""
-    index, existing_metadata = init_or_load_faiss_index()
-
-    if file_path in existing_metadata:
-        return "skipped"
-
-    image = load_image(file_path)
-    if image is None:
-        return "error"
-
-    try:
-        features = extract_features(image)
-        faiss = get_faiss()  # Lazy load FAISS
-
-        if index is None:
-            dimension = features.shape[0]
-            # Use memory-efficient index type if configured
-            if MEMORY_CONFIG.faiss_index_type == "IndexIVFFlat":
-                quantizer = faiss.IndexFlatL2(dimension)
-                index = faiss.IndexIVFFlat(quantizer, dimension, MEMORY_CONFIG.faiss_nlist)
-                logger.info(f"Creating memory-efficient IndexIVFFlat with {MEMORY_CONFIG.faiss_nlist} clusters")
-            else:
-                index = faiss.IndexFlatL2(dimension)
-                logger.info("Creating new FAISS index")
-
-        index.add(np.array([features], dtype="float32"))
-        existing_metadata.append(file_path)
-
-        save_faiss_index_and_metadata(index, existing_metadata)
-        
-        # Force garbage collection to free memory
-        if MEMORY_CONFIG.aggressive_gc:
-            del features
-            gc.collect()
-        
-        return "processed"
-    except Exception as e:
-        logger.error(f"Error processing {file_path}: {e}")
-        return "error"
-
-
 def calculateFaissIndex(media_files):
-    """Calculate FAISS index with memory optimization."""
+    """Calculate FAISS index with batch processing and memory optimization."""
     # Initialize session state variables
     if "message" not in st.session_state:
         st.session_state["message"] = ""
@@ -233,76 +210,118 @@ def calculateFaissIndex(media_files):
         st.session_state["stop_index"] = True
         st.session_state["calculate_faiss"] = False
 
-    total_files = len(media_files)
+    index, existing_metadata = init_or_load_faiss_index()
+    files_to_process = sorted([f for f in media_files if f not in existing_metadata])
+    total_files_to_process = len(files_to_process)
+
+    if not files_to_process:
+        st.success("FAISS index is already up to date.")
+        st.session_state["calculate_faiss"] = False
+        return
+
     processed_files = 0
-    skipped_files = 0
     error_files = 0
     total_time = 0
 
-    # Process files in batches to manage memory
-    batch_size = MEMORY_CONFIG.batch_size
-    st.info(f"⚡ Processing in batches of {batch_size} for memory optimization")
-    
-    for batch_start in range(0, total_files, batch_size):
-        if st.session_state["stop_index"]:
-            break
-            
-        batch_end = min(batch_start + batch_size, total_files)
-        batch_files = media_files[batch_start:batch_end]
-        
-        for i, file_path in enumerate(batch_files):
-            actual_index = batch_start + i
-            
-            if st.session_state["stop_index"]:
-                st.session_state["message"] = "Processing stopped by user."
-                message_placeholder.text(st.session_state["message"])
-                break
+    all_new_features_list = []
+    all_new_metadata = []
 
-            start_time = time.time()
-            status = update_faiss_index(file_path)
-            
-            if status == "processed":
-                processed_files += 1
-            elif status == "skipped":
-                skipped_files += 1
-            elif status == "error":
+    batch_size = MEMORY_CONFIG.batch_size
+    st.info(f"⚡ Processing {total_files_to_process} new files in batches of {batch_size} for memory optimization")
+
+    for i in range(0, total_files_to_process, batch_size):
+        if st.session_state["stop_index"]:
+            st.session_state["message"] = "Processing stopped by user."
+            message_placeholder.text(st.session_state["message"])
+            break
+
+        batch_paths = files_to_process[i : i + batch_size]
+        batch_images = []
+        valid_paths_in_batch = []
+
+        start_time = time.time()
+
+        for file_path in batch_paths:
+            image = load_image(file_path)
+            if image:
+                batch_images.append(image)
+                valid_paths_in_batch.append(file_path)
+            else:
                 error_files += 1
 
-            end_time = time.time()
-            processing_time = end_time - start_time
-            total_time += processing_time
+        if batch_images:
+            try:
+                # Process the whole batch
+                features_batch = extract_features(batch_images)
+                all_new_features_list.append(features_batch)
+                all_new_metadata.extend(valid_paths_in_batch)
+                processed_files += len(batch_images)
+            except Exception as e:
+                logger.error(f"Error processing batch starting with {batch_paths[0]}: {e}")
+                error_files += len(batch_images)
 
-            # Update progress
-            progress_percentage = (actual_index + 1) / total_files
-            st.session_state["progress"] = progress_percentage
-            progress_bar.progress(progress_percentage)
-            
-            estimated_time_remaining = (total_time / (actual_index + 1)) * (total_files - (actual_index + 1))
-            estimated_time_remaining_min = int(estimated_time_remaining / 60)
+        total_time += time.time() - start_time
+        processed_count = processed_files + error_files
 
-            st.session_state["message"] = (
-                f"Processing file {actual_index + 1}/{total_files} - "
-                f"(Processed: {processed_files}, Skipped: {skipped_files}, Errors: {error_files}). "
-                f"Estimated time remaining: {estimated_time_remaining_min} minutes."
-            )
-            message_placeholder.text(st.session_state["message"])
-        
+        # Update progress
+        progress_percentage = (i + len(batch_paths)) / total_files_to_process
+        st.session_state["progress"] = progress_percentage
+        progress_bar.progress(progress_percentage)
+
+        estimated_time_remaining = (total_time / processed_count) * (total_files_to_process - processed_count) if processed_count > 0 else 0
+        estimated_time_remaining_min = int(estimated_time_remaining / 60)
+
+        st.session_state["message"] = (
+            f"Processing file {i + len(batch_paths)}/{total_files_to_process} - "
+            f"(Processed: {processed_files}, Errors: {error_files}). "
+            f"Estimated time remaining: {estimated_time_remaining_min} minutes."
+        )
+        message_placeholder.text(st.session_state["message"])
+
         # Force garbage collection after each batch
         if MEMORY_CONFIG.aggressive_gc:
             gc.collect()
-        
+
         # Clear GPU cache if using CUDA
-        if 'model_components' in _component_cache:
-            components = _component_cache['model_components']
-            if components['device'].type == 'cuda' and MEMORY_CONFIG.clear_cache_after_batch:
-                components['torch'].cuda.empty_cache()
+        if "model_components" in _component_cache:
+            components = _component_cache["model_components"]
+            if components["device"].type == "cuda" and MEMORY_CONFIG.clear_cache_after_batch:
+                components["torch"].cuda.empty_cache()
+
+    # After the loop, update index and save ONCE
+    if not st.session_state["stop_index"] and all_new_features_list:
+        try:
+            st.session_state["message"] = "Finalizing index..."
+            message_placeholder.text(st.session_state["message"])
+            features_array = np.vstack(all_new_features_list)
+            faiss = get_faiss()
+
+            if index is None:
+                dimension = features_array.shape[1]
+                # Use memory-efficient index type if configured
+                if MEMORY_CONFIG.faiss_index_type == "IndexIVFFlat":
+                    quantizer = faiss.IndexFlatL2(dimension)
+                    index = faiss.IndexIVFFlat(quantizer, dimension, MEMORY_CONFIG.faiss_nlist)
+                    logger.info(f"Creating memory-efficient IndexIVFFlat with {MEMORY_CONFIG.faiss_nlist} clusters")
+                else:
+                    index = faiss.IndexFlatL2(dimension)
+                    logger.info("Creating new FAISS index")
+
+            index.add(features_array)
+            final_metadata = existing_metadata + all_new_metadata
+            save_faiss_index_and_metadata(index, final_metadata)
+
+            st.session_state["message"] = f"Processing complete! Added {processed_files} new files to the index."
+            message_placeholder.text(st.session_state["message"])
+
+        except Exception as e:
+            st.session_state["message"] = f"Error finalizing index: {e}"
+            message_placeholder.text(st.session_state["message"])
+            logger.error(f"Error finalizing FAISS index: {e}")
 
     st.session_state["stop_index"] = False
-    if not st.session_state.get("stop_index", False):
-        st.session_state["message"] = "Processing complete!"
-        message_placeholder.text(st.session_state["message"])
-        progress_bar.progress(1.0)
-        st.session_state["calculate_faiss"] = False
+    progress_bar.progress(1.0)
+    st.session_state["calculate_faiss"] = False
 
 
 def generate_db_duplicate():
